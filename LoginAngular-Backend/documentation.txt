@@ -1,0 +1,39 @@
+Tutorial de NodeJS para el Backend
+
+Instalación de dependecias necesarioas para el Backend
+- npm install
+    express
+    bcrypt
+    cors
+    dotenv
+    jsonwebtoken
+    sequelize
+    mysql2
+- npm install typescript --save-dev
+- npm install nodemon --save-dev
+
+
+Inicializar el tsconfig.json
+- npx tsc --init
+
+Habilizar en el tsconfig.json
+-  "outDir": "./dist", 
+
+Generar o crear la carpeta dist
+- npx tsc
+
+Ejecutar el archivo index o server
+-node dist/index.js
+
+Ejecutar el archivo index o server con nodemo
+-npx nodemon dist/index.js
+
+Crear los archivos en tiempo real en la carpeta dist
+npx tsc --watch 
+
+Instalar dependecias de TS 
+- npm i @types/express --save-dev
+
+Encripta Password 
+- npm i --save-dev @types/bcrypt
+- npm i --save-dev @types/cors
