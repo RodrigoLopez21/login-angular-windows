@@ -1,11 +1,9 @@
 import { Sequelize } from "sequelize";
 
-const sequelize = new Sequelize('loginangular', 'root', 'NuevaClaveFuerte123!', {
+const sequelize = new Sequelize('loginangular', 'usuario_app', 'contraseña_segura', {
   dialect: 'mysql',
   host: 'localhost',
-  dialectOptions: {
-    socketPath: '/tmp/mysql.sock'
-  },
+  port: 3306,   
   logging: false
 });
 

@@ -18,6 +18,11 @@
 --
 -- Table structure for table `categories`
 --
+CREATE DATABASE IF NOT EXISTS loginangular;
+USE loginangular;
+CREATE USER IF NOT EXISTS 'usuario_app'@'localhost' IDENTIFIED BY 'contraseña_segura';
+GRANT ALL PRIVILEGES ON loginangular.* TO 'usuario_app'@'localhost';
+FLUSH PRIVILEGES;
 
 DROP TABLE IF EXISTS `categories`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
