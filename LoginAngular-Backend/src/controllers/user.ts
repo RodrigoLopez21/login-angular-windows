@@ -58,8 +58,6 @@ export const CreateUser = async (req: Request, res: Response) => {
 export const LoginUser = async (req: Request, res: Response) => {
     const { Uemail, Upassword } = req.body;
 
-    console.log(req.body);
-
     const user: any = await User.findOne({ where: { Uemail: Uemail } })
     if (!user) {
         return res.status(400).json({
@@ -67,7 +65,6 @@ export const LoginUser = async (req: Request, res: Response) => {
         })
     }
 
-    
     const passwordValid = await bcrypt.compare(Upassword, user.Upassword)
 
     if (!passwordValid) {
@@ -76,10 +73,15 @@ export const LoginUser = async (req: Request, res: Response) => {
         })
     }
 
+    // Incluye id, email y rol en el token
+    const secretKey = process.env.SECRET_KEY;
+    if (!secretKey) {
+    throw new Error('SECRET_KEY no está definida en las variables de entorno');
+    }
     const token = jwt.sign({
-        Uemail: Uemail
-    }, process.env.SECRET_KEY || 'TSE-Edaniel-Valencia',
-        // { expiresIn: '10000' }
-    );
-    res.json({ token })
+    id: user.Uid,
+    email: user.Uemail,
+    rol: user.Ucredential 
+    }, secretKey);
+    res.json({ token });
 }

@@ -61,7 +61,6 @@ const CreateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 exports.CreateUser = CreateUser;
 const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { Uemail, Upassword } = req.body;
-    console.log(req.body);
     const user = yield user_1.User.findOne({ where: { Uemail: Uemail } });
     if (!user) {
         return res.status(400).json({
@@ -74,9 +73,15 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             msg: `Password Incorrecto => ${Upassword}`
         });
     }
+    // Incluye id, email y rol en el token
+    const secretKey = process.env.SECRET_KEY;
+    if (!secretKey) {
+        throw new Error('SECRET_KEY no está definida en las variables de entorno');
+    }
     const token = jsonwebtoken_1.default.sign({
-        Uemail: Uemail
-    }, process.env.SECRET_KEY || 'TSE-Edaniel-Valencia');
-    res.json({ token });
+        id: user.Uid,
+        email: user.Uemail,
+        rol: user.Ucredential
+    }, secretKey);
 });
 exports.LoginUser = LoginUser;
