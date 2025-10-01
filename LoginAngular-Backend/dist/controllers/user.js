@@ -83,5 +83,6 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         email: user.Uemail,
         rol: user.Ucredential
     }, secretKey);
+    res.json({ token });
 });
 exports.LoginUser = LoginUser;
