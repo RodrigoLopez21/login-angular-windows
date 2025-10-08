@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Product } from '../models/product';
 import { Category } from '../models/category';
+import xss from 'xss';
 
 
 
@@ -35,7 +36,9 @@ export const ReadIdProductId = async (req: Request, res: Response) => {
 
 export const CreateProduct = async (req: Request, res: Response) => {
 
-    const { Pname, Pdescription, CategoryId } = req.body
+    const Pname = xss(req.body.Pname);
+    const Pdescription = xss(req.body.Pdescription);
+    const CategoryId = xss(req.body.CategoryId);
 
     try {
 
@@ -68,9 +71,12 @@ export const CreateProduct = async (req: Request, res: Response) => {
 
 export const UpdateProduct = async (req: Request, res: Response) => {
 
-    const { Pid } = req.params;
-    const { Pname, Pdescription, Pstatus, CategoryId } = req.body;
-    
+    const Pid = req.params.Pid;
+    const Pname = xss(req.body.Pname);
+    const Pdescription = xss(req.body.Pdescription);
+    const Pstatus = xss(req.body.Pstatus);
+    const CategoryId = xss(req.body.CategoryId);
+
     try {
         const product: any = await Product.findOne({ where: { Pid: Pid } });
         

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { Role } from '../models/role';
+import xss from 'xss';
 
 export const ReadRole = async (req: Request, res: Response) => {
     const listRole = await Role.findAll();
@@ -31,7 +32,7 @@ export const ReadRoleId = async (req: Request, res: Response) => {
 
 export const CreateRole = async (req: Request, res: Response) => {
 
-    const { Rname } = req.body
+    const Rname = xss(req.body.Rname);
 
     const role: any = await Role.findOne({ where: { Rname: Rname } })
 
@@ -58,8 +59,9 @@ export const CreateRole = async (req: Request, res: Response) => {
 
 export const UpdateRole = async (req: Request, res: Response) => {
 
-    const { Rid } = req.params;
-    const { Rname, Rstatus } = req.body;
+    const Rid = xss(req.params.Rid);
+    const Rname = xss(req.body.Rname);
+    const Rstatus = xss(req.body.Rstatus);
 
     try {
         const role: any = await Role.findOne({ where: { Rid: Rid } });

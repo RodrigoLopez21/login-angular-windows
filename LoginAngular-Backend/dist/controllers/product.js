@@ -8,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeleteProduct = exports.UpdateProduct = exports.CreateProduct = exports.ReadIdProductId = exports.ReadProduct = void 0;
 const product_1 = require("../models/product");
+const xss_1 = __importDefault(require("xss"));
 const ReadProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const listProduct = yield product_1.Product.findAll();
     res.json(listProduct);
@@ -38,7 +42,9 @@ const ReadIdProductId = (req, res) => __awaiter(void 0, void 0, void 0, function
 });
 exports.ReadIdProductId = ReadIdProductId;
 const CreateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Pname, Pdescription, CategoryId } = req.body;
+    const Pname = (0, xss_1.default)(req.body.Pname);
+    const Pdescription = (0, xss_1.default)(req.body.Pdescription);
+    const CategoryId = (0, xss_1.default)(req.body.CategoryId);
     try {
         const existingProduct = yield product_1.Product.findOne({ where: { Pname: Pname } });
         if (existingProduct) {
@@ -64,8 +70,11 @@ const CreateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.CreateProduct = CreateProduct;
 const UpdateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Pid } = req.params;
-    const { Pname, Pdescription, Pstatus, CategoryId } = req.body;
+    const Pid = req.params.Pid;
+    const Pname = (0, xss_1.default)(req.body.Pname);
+    const Pdescription = (0, xss_1.default)(req.body.Pdescription);
+    const Pstatus = (0, xss_1.default)(req.body.Pstatus);
+    const CategoryId = (0, xss_1.default)(req.body.CategoryId);
     try {
         const product = yield product_1.Product.findOne({ where: { Pid: Pid } });
         if (!product) {
