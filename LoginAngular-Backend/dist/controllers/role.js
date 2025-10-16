@@ -8,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeleteRole = exports.UpdateRole = exports.CreateRole = exports.ReadRoleId = exports.ReadRole = void 0;
 const role_1 = require("../models/role");
+const xss_1 = __importDefault(require("xss"));
 const ReadRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const listRole = yield role_1.Role.findAll();
     res.json(listRole);
@@ -38,7 +42,7 @@ const ReadRoleId = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.ReadRoleId = ReadRoleId;
 const CreateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Rname } = req.body;
+    const Rname = (0, xss_1.default)(req.body.Rname);
     const role = yield role_1.Role.findOne({ where: { Rname: Rname } });
     if (role) {
         return res.status(400).json({
@@ -62,8 +66,9 @@ const CreateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.CreateRole = CreateRole;
 const UpdateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Rid } = req.params;
-    const { Rname, Rstatus } = req.body;
+    const Rid = req.params.Rid;
+    const Rname = (0, xss_1.default)(req.body.Rname);
+    const Rstatus = (0, xss_1.default)(req.body.Rstatus);
     try {
         const role = yield role_1.Role.findOne({ where: { Rid: Rid } });
         if (!role) {

@@ -8,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeleteCategory = exports.UpdateCategory = exports.CreateCategory = exports.ReadCategoryId = exports.ReadCategory = void 0;
 const category_1 = require("../models/category");
+const xss_1 = __importDefault(require("xss"));
 const ReadCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const listCategory = yield category_1.Category.findAll();
     res.json(listCategory);
@@ -42,7 +46,8 @@ const ReadCategoryId = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.ReadCategoryId = ReadCategoryId;
 const CreateCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Cname, Cdescription } = req.body;
+    const Cname = (0, xss_1.default)(req.body.Cname);
+    const Cdescription = (0, xss_1.default)(req.body.Cdescription);
     const category = yield category_1.Category.findOne({ where: { Cname: Cname } });
     if (category) {
         return res.status(400).json({
@@ -67,8 +72,10 @@ const CreateCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.CreateCategory = CreateCategory;
 const UpdateCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Cid } = req.params;
-    const { Cname, Cdescription, Cstatus } = req.body;
+    const Cid = req.params.Cid;
+    const Cname = (0, xss_1.default)(req.body.Cname);
+    const Cdescription = (0, xss_1.default)(req.body.Cdescription);
+    const Cstatus = (0, xss_1.default)(req.body.Cstatus);
     try {
         const category = yield category_1.Category.findOne({ where: { Cid: Cid } });
         if (!category) {
