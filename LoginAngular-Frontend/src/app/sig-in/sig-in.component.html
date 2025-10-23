@@ -32,12 +32,12 @@
             </div>
             <div class="sm:col-span-1">
               <label for="floatingPassword" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contraseña</label>
-              <input [(ngModel)]="Upassword" name="password" id="floatingPassword" type="password" required maxlength="20"
+              <input [(ngModel)]="Upassword" name="password" id="floatingPassword" type="password"  minlength="10" maxlength="20"
                 class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="••••••••" />
             </div>
             <div class="sm:col-span-1">
               <label for="floatingRepeatPassword" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Repetir contraseña</label>
-              <input [(ngModel)]="repeatUPassword" name="repeatPassword" id="floatingRepeatPassword" type="password" required maxlength="20"
+              <input [(ngModel)]="repeatUPassword" name="repeatPassword" id="floatingRepeatPassword" type="password" required minlength="10" maxlength="20"
                 class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="••••••••" />
             </div>
           </div>
