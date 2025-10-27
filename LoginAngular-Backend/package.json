@@ -4,10 +4,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec \"node --require ts-node/register src/index.ts\"",
-    "build": "tsc",
+    "build": "cross-env NODE_ENV=production npm run build",
     "start": "node dist/index.js",
     "typescript": "tsc --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rimraf dist .cache",
+    "postinstall": "echo Postinstall ok"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -23,10 +25,11 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^24.3.3",
-    "cross-env": "^10.0.0",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.0",
     "rimraf": "^6.0.1",
     "sequelize": "^6.37.3",
+    "shx": "^0.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
