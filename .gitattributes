@@ -1,0 +1,10 @@
+# Normalizar finales de línea para todos los archivos de texto
+* text=auto
+
+# Archivos específicos (opcional, pero recomendable)
+*.js text
+*.ts text
+*.html text
+*.css text
+*.json text
+*.md text
