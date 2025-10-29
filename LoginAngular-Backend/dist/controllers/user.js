@@ -16,6 +16,7 @@ exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const xss_1 = __importDefault(require("xss"));
 const ReadUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const listUser = yield user_1.User.findAll();
     res.json({
@@ -25,7 +26,12 @@ const ReadUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.ReadUser = ReadUser;
 const CreateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { Uname, Ulastname, Upassword, Uemail, Ucredential } = req.body;
+    // Sanitiza los datos recibidos
+    const Uname = (0, xss_1.default)(req.body.Uname);
+    const Ulastname = (0, xss_1.default)(req.body.Ulastname);
+    const Upassword = (0, xss_1.default)(req.body.Upassword);
+    const Uemail = (0, xss_1.default)(req.body.Uemail);
+    const Ucredential = (0, xss_1.default)(req.body.Ucredential);
     const userEmail = yield user_1.User.findOne({ where: { Uemail: Uemail } });
     const userCredential = yield user_1.User.findOne({ where: { Ucredential: Ucredential } });
     if (userEmail) {

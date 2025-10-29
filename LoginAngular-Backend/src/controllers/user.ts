@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import { User } from '../models/user'
 import { Op } from 'sequelize'
 import jwt from 'jsonwebtoken'
+import xss from 'xss';
 
 
 export const ReadUser = async (req: Request, res: Response) => {
@@ -16,8 +17,13 @@ export const ReadUser = async (req: Request, res: Response) => {
 
 
 export const CreateUser = async (req: Request, res: Response) => {
+    // Sanitiza los datos recibidos
+    const Uname = xss(req.body.Uname);
+    const Ulastname = xss(req.body.Ulastname);
+    const Upassword = xss(req.body.Upassword);
+    const Uemail = xss(req.body.Uemail);
+    const Ucredential = xss(req.body.Ucredential);
 
-    const { Uname, Ulastname, Upassword, Uemail, Ucredential } = req.body  
     const userEmail = await User.findOne({ where: {  Uemail: Uemail  }})
     const userCredential = await User.findOne({ where: {  Ucredential: Ucredential  }})
 

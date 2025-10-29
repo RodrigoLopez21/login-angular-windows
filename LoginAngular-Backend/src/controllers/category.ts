@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { Category } from '../models/category'
+import xss from 'xss'
 
 export const ReadCategory = async (req: Request, res: Response) => {
     const listCategory = await Category.findAll();
@@ -34,7 +35,8 @@ export const ReadCategoryId = async (req: Request, res: Response) => {
 
 export const CreateCategory = async (req: Request, res: Response) => {
 
-    const { Cname, Cdescription } = req.body
+    const Cname = xss(req.body.Cname);
+    const Cdescription = xss(req.body.Cdescription);
 
     const category: any = await Category.findOne({ where: { Cname: Cname } })
 
@@ -63,8 +65,10 @@ export const CreateCategory = async (req: Request, res: Response) => {
 
 export const UpdateCategory = async (req: Request, res: Response) => {
 
-    const { Cid } = req.params;
-    const { Cname, Cdescription, Cstatus } = req.body;
+    const Cid = req.params.Cid;
+    const Cname = xss(req.body.Cname);
+    const Cdescription = xss(req.body.Cdescription);
+    const Cstatus = xss(req.body.Cstatus);
 
     try {
         const category: any = await Category.findOne({ where: { Cid: Cid } });
