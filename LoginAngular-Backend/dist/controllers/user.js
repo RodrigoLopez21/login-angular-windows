@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const xss_1 = __importDefault(require("xss"));
@@ -44,7 +44,7 @@ const CreateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             msg: `Usuario ya existe con la credencial ${Ucredential}`
         });
     }
-    const UpasswordHash = yield bcrypt_1.default.hash(Upassword, 10);
+    const UpasswordHash = yield bcryptjs_1.default.hash(Upassword, 10);
     try {
         user_1.User.create({
             Uname: Uname,
@@ -73,7 +73,7 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             msg: `Usuario no existe con el email ${Uemail}`
         });
     }
-    const passwordValid = yield bcrypt_1.default.compare(Upassword, user.Upassword);
+    const passwordValid = yield bcryptjs_1.default.compare(Upassword, user.Upassword);
     if (!passwordValid) {
         return res.status(400).json({
             msg: `Password Incorrecto => ${Upassword}`
@@ -82,7 +82,8 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Incluye id, email y rol en el token
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
-        throw new Error('SECRET_KEY no está definida en las variables de entorno');
+        console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
+        return res.status(500).json({ msg: 'Error interno del servidor: la configuración de seguridad está incompleta.' });
     }
     const token = jsonwebtoken_1.default.sign({
         id: user.Uid,

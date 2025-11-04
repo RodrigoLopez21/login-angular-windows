@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { User } from '../models/user'
 import { Op } from 'sequelize'
 import jwt from 'jsonwebtoken'
@@ -82,7 +82,8 @@ export const LoginUser = async (req: Request, res: Response) => {
     // Incluye id, email y rol en el token
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
-    throw new Error('SECRET_KEY no está definida en las variables de entorno');
+        console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
+        return res.status(500).json({ msg: 'Error interno del servidor: la configuración de seguridad está incompleta.' });
     }
     const token = jwt.sign({
     id: user.Uid,

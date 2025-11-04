@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const connection_1 = require("../database/connection");
 const category_1 = __importDefault(require("../routes/category"));
 const product_1 = __importDefault(require("../routes/product"));
 const role_1 = __importDefault(require("../routes/role"));
@@ -21,15 +23,12 @@ const category_2 = require("./category");
 const product_2 = require("./product");
 const role_2 = require("./role");
 const user_2 = require("./user");
-const cors_1 = __importDefault(require("cors"));
 class Server {
     constructor() {
         this.app = (0, express_1.default)();
         this.port = process.env.PORT || '3001';
-        this.listen();
         this.midlewares();
         this.router();
-        this.DBconnetc();
     }
     listen() {
         this.app.listen(this.port, () => {
@@ -48,6 +47,20 @@ class Server {
         //
         this.app.use((0, cors_1.default)());
     }
+    initialize() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // 1. Sincronizar modelos y probar conexión a la DB
+                yield this.DBconnetc();
+                // 2. Iniciar el servidor solo si la conexión a la DB es exitosa
+                this.listen();
+            }
+            catch (error) {
+                console.error('Fallo al inicializar el servidor:', error);
+                process.exit(1);
+            }
+        });
+    }
     DBconnetc() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -57,10 +70,11 @@ class Server {
                 // await User.sync({alter: true}); // Update atribute of table
                 yield role_2.Role.sync();
                 yield user_2.User.sync();
-                console.log("Conexion de DB exitoso");
+                yield (0, connection_1.testConnection)(); // Reutilizamos la función para mostrar el mensaje de éxito
             }
             catch (error) {
-                console.log("Conexion de DB errorena => " + error);
+                console.error("Error en la conexión a la base de datos => ", error);
+                throw error; // Lanzamos el error para que initialize() lo capture
             }
         });
     }

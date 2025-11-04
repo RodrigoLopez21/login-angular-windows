@@ -6,6 +6,10 @@ module.exports = {
     "./node_modules/flowbite/**/*.js",
     "./node_modules/flowbite/**/**/*.js",
   ],
+  safelist: [
+    // Eliminamos el patrón '/^datatable-.*$/' que causaba la advertencia,
+    // ya que no se está utilizando.
+  ],
   darkMode: 'class',
   theme: {
     extend: {

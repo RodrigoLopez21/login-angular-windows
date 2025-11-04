@@ -18,20 +18,9 @@ class Server {
     constructor(){
         this.app = express()
         this.port = process.env.PORT || '3001'
-        
-    }
 
-    async initialize() {
-        try {
-            // Test database connection
-            await testConnection();
-            
-            // Start server only if DB connection is successful
-            this.listen();
-        } catch (error) {
-            console.error('Failed to initialize server:', error);
-            process.exit(1);
-        }
+        this.midlewares();
+        this.router();
     }
 
     listen(){
@@ -55,6 +44,19 @@ class Server {
         this.app.use(cors())
     }
 
+    async initialize() {
+        try {
+            // 1. Sincronizar modelos y probar conexión a la DB
+            await this.DBconnetc();
+            
+            // 2. Iniciar el servidor solo si la conexión a la DB es exitosa
+            this.listen();
+        } catch (error) {
+            console.error('Fallo al inicializar el servidor:', error);
+            process.exit(1);
+        }
+    }
+
     async DBconnetc(){
         try {
 
@@ -64,10 +66,11 @@ class Server {
             // await User.sync({alter: true}); // Update atribute of table
             await Role.sync(); 
             await User.sync(); 
-            console.log("Conexion de DB exitoso");
+            await testConnection(); // Reutilizamos la función para mostrar el mensaje de éxito
         
         } catch (error) {
-            console.log("Conexion de DB errorena => "+error);
+            console.error("Error en la conexión a la base de datos => ", error);
+            throw error; // Lanzamos el error para que initialize() lo capture
             
         }
     }

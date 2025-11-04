@@ -66,7 +66,7 @@ const CreateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.CreateRole = CreateRole;
 const UpdateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const Rid = req.params.Rid;
+    const Rid = (0, xss_1.default)(req.params.Rid);
     const Rname = (0, xss_1.default)(req.body.Rname);
     const Rstatus = (0, xss_1.default)(req.body.Rstatus);
     try {

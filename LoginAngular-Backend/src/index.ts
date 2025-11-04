@@ -1,11 +1,11 @@
-import dotenv from 'dotenv'
-import Server from './models/server'
+import path from 'path';
+import dotenv from 'dotenv';
 
-// CONFIGURACION DEL DOTENV
-dotenv.config() 
-const server = new Server()
-server.initialize().catch(error => {
-    console.error('Failed to start server:', error)
-    process.exit(1)
-})
+// Carga las variables de entorno ANTES que cualquier otra cosa.
+// Esto es crucial para que el resto de la aplicación tenga acceso a process.env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+import Server from './models/server';
+// Inicia el servidor
+const server = new Server();
+server.initialize(); // Usamos el método initialize para conectar a la DB antes de escuchar

@@ -1,40 +1,25 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const sequelize = new Sequelize(
-    process.env.DB_NAME || 'defaultdb',
-    process.env.DB_USER || 'defaultuser',
-    process.env.DB_PASSWORD || 'defaultpass',
+    process.env.DB_NAME || 'test', 
+    process.env.DB_USER || 'root', 
+    process.env.DB_PASS, 
     {
         host: process.env.DB_HOST || 'localhost',
-        dialect: 'postgres',
-        port: parseInt(process.env.DB_PORT || '5432'),
-        logging: false, // set to console.log to see SQL queries
-        dialectOptions: {
-            ssl: process.env.DB_SSL === 'true' ? {
-                require: true,
-                rejectUnauthorized: false
-            } : false
-        },
-        pool: {
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        }
+        dialect: 'mysql', // ¡Esta es la corrección clave!
+        port: Number(process.env.DB_PORT) || 3306,
+        logging: false, // Desactiva los logs de SQL en la consola para mayor claridad
     }
 );
 
-// Test connection function
 export const testConnection = async () => {
     try {
         await sequelize.authenticate();
-        console.log('Database connection has been established successfully.');
+        console.log('Conexión a la base de datos establecida exitosamente.');
     } catch (error) {
-        console.error('Unable to connect to the database:', error);
-        throw error;
+        console.error('No se pudo conectar a la base de datos:', error);
+        // Es una buena práctica terminar el proceso si la DB no está disponible
+        process.exit(1);
     }
 };
 
