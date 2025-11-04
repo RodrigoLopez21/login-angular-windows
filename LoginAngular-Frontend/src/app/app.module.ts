@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ToastrModule } from 'ngx-toastr';
 import { AddTokenInterceptor } from './utils/add-token.interceptor';
+import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 @NgModule({
   declarations: [
     AppComponent,
@@ -30,7 +31,8 @@ import { AddTokenInterceptor } from './utils/add-token.interceptor';
     SpinnerComponent,
     MaintenanceComponent,
     ProductComponent,
-    ErrorPageComponent    
+    ErrorPageComponent,
+    UserDashboardComponent    
   ],
   imports: [
     BrowserModule,

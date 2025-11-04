@@ -45,8 +45,8 @@ export class LoginComponent  implements OnInit{
       //  console.log(token);     
         this.toastr.success("", "Bienvenido")
         localStorage.setItem('myToken',token) 
-        this.router.navigate(['/admin/product/listProduct'])
-        // this.router.navigate(['/dashboard/product/listProduct']) 
+       // this.router.navigate(['/admin/product/listProduct']) para el Admin
+         this.router.navigate(['/user/dashboard']) 
       },
       error: (e: HttpErrorResponse) => {
         this.loading =  false
