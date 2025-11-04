@@ -1,9 +1,15 @@
 {
+  "name": "login-angular-windows",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix LoginAngular-Backend\" \"npm start --prefix LoginAngular-Frontend\"",
+    "postinstall": "npm install --prefix LoginAngular-Backend && npm install --prefix LoginAngular-Frontend"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "xss": "^1.0.15"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6"
+    "@types/bcryptjs": "^2.4.6",
+    "concurrently": "^8.2.2"
   }
 }
