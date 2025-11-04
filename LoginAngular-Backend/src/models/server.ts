@@ -1,4 +1,6 @@
 import express, {Application} from 'express'
+import cors from 'cors'
+import { testConnection } from '../database/connection'
 import routesCategoty from '../routes/category'
 import routesProduct from '../routes/product'
 import routesRole from '../routes/role'
@@ -7,22 +9,29 @@ import { Category } from './category'
 import { Product } from './product'
 import { Role } from './role'
 import { User } from './user'
-import cors from 'cors'
 
 class Server {
 
     private app: Application
     private port: string
     
-
     constructor(){
         this.app = express()
         this.port = process.env.PORT || '3001'
-        this.listen();
-        this.midlewares();
-        this.router();
-        this.DBconnetc();
         
+    }
+
+    async initialize() {
+        try {
+            // Test database connection
+            await testConnection();
+            
+            // Start server only if DB connection is successful
+            this.listen();
+        } catch (error) {
+            console.error('Failed to initialize server:', error);
+            process.exit(1);
+        }
     }
 
     listen(){
