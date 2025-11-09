@@ -14,6 +14,10 @@ export class UserDashboardComponent implements OnInit {
 
   constructor(private router: Router) {}
 
+  goToProfile(): void {
+    this.router.navigate(['/user/profile']);
+  }
+
   ngOnInit(): void {
     // Aquí puedes cargar datos del usuario desde tu API
     this.loadUserData();

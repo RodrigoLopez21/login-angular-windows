@@ -22,6 +22,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ToastrModule } from 'ngx-toastr';
 import { AddTokenInterceptor } from './utils/add-token.interceptor';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
+import { UserProfileComponent } from './components/user-profile/user-profile.component';
 @NgModule({
   declarations: [
     AppComponent,
@@ -32,7 +33,8 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
     MaintenanceComponent,
     ProductComponent,
     ErrorPageComponent,
-    UserDashboardComponent    
+    UserDashboardComponent,
+    UserProfileComponent    
   ],
   imports: [
     BrowserModule,
