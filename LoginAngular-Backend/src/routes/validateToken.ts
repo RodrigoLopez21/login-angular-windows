@@ -8,7 +8,11 @@ const validateToken = (req: Request, res: Response, next: NextFunction) => {
        try {
         const token = headerToken.slice(7);
         // console.log(token);        
-        jwt.verify(token, process.env.SECRET_KEY || 'TSE-Edaniel-Valencia')
+        // Verify and attach decoded payload to request for downstream handlers
+        const secret = process.env.SECRET_KEY || 'TSE-Edaniel-Valencia'
+        const decoded = jwt.verify(token, secret);
+        // attach to request as `user`
+        (req as any).user = decoded;
         next()
        } catch (error) {
         res.status(401).json({

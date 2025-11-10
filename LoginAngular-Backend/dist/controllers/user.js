@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.updateProfile = exports.getProfile = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -93,3 +93,69 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.json({ token });
 });
 exports.LoginUser = LoginUser;
+const getProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id; // Obtiene el ID del usuario del token
+        const user = yield user_1.User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({
+                msg: 'Usuario no encontrado'
+            });
+        }
+        // Mapear los campos del backend a los del frontend
+        res.json({
+            id: user.Uid,
+            firstName: user.Uname,
+            lastName: user.Ulastname,
+            email: user.Uemail,
+            username: user.Ucredential
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            msg: 'Error al obtener el perfil del usuario',
+            error
+        });
+    }
+});
+exports.getProfile = getProfile;
+const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        const { firstName, lastName, email, password } = req.body;
+        const user = yield user_1.User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({
+                msg: 'Usuario no encontrado'
+            });
+        }
+        // Actualizar los campos
+        const updateData = {
+            Uname: (0, xss_1.default)(firstName),
+            Ulastname: (0, xss_1.default)(lastName),
+            Uemail: (0, xss_1.default)(email)
+        };
+        // Si se proporciona una nueva contraseña, hashearla
+        if (password) {
+            updateData.Upassword = yield bcryptjs_1.default.hash((0, xss_1.default)(password), 10);
+        }
+        yield user.update(updateData);
+        res.json({
+            msg: 'Perfil actualizado correctamente',
+            user: {
+                id: user.Uid,
+                firstName: user.Uname,
+                lastName: user.Ulastname,
+                email: user.Uemail,
+                username: user.Ucredential
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            msg: 'Error al actualizar el perfil del usuario',
+            error
+        });
+    }
+});
+exports.updateProfile = updateProfile;

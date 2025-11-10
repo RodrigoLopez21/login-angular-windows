@@ -13,12 +13,12 @@ import { UserService } from 'src/app/services/user.service';
 })
 export class SigInComponent implements OnInit {
 
-  Uname: string = '';
-  Ulastname: string = '';
-  Uemail: string = '';
-  Upassword: string = '';
-  Ucredential: string = '';
-  repeatUPassword: string = '';
+  firstName: string = '';
+  lastName: string = '';
+  email: string = '';
+  password: string = '';
+  credential: string = '';
+  repeatPassword: string = '';
   loading: boolean = false;
   constructor(
     private toastr: ToastrService,
@@ -34,24 +34,24 @@ export class SigInComponent implements OnInit {
 
     //VALIDAR EL FORMULARIO
 
-    if (this.Uname == '' || this.Ulastname == '' || this.Uemail == '' || this.Ucredential == '' || this.Upassword == '' || this.repeatUPassword == '') {
+    if (this.firstName == '' || this.lastName == '' || this.email == '' || this.credential == '' || this.password == '' || this.repeatPassword == '') {
       this.toastr.error('Todos los campos son obligatorios!', 'Error');
       return
     }
 
-    if (this.Upassword != this.repeatUPassword) {
-      this.toastr.warning('Las contreñas son diferentes!', 'Error');
+    if (this.password != this.repeatPassword) {
+      this.toastr.warning('Las contraseñas son diferentes!', 'Error');
       return
     }
 
     //CREAR EL OBJETO
 
     const user: User = {
-      Uname: this.Uname,
-      Ulastname: this.Ulastname,
-      Uemail: this.Uemail,
-      Upassword: this.Upassword,
-      Ucredential: this.Ucredential,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      email: this.email,
+      password: this.password,
+      credential: this.credential,
     }
 
     this.loading = true
@@ -63,7 +63,7 @@ export class SigInComponent implements OnInit {
     this._userService.signIn(user).subscribe({
       next: (v) => {
         this.loading = false
-        this.toastr.success(`El usuario ${this.Uname} ${this.Ulastname} fue registrado exitosamente", "Usuario Registrado`)
+  this.toastr.success(`El usuario ${this.firstName} ${this.lastName} fue registrado exitosamente", "Usuario Registrado`)
         this.router.navigate(['/logIn'])
       },
       error: (e: HttpErrorResponse) => {

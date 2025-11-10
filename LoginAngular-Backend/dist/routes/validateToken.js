@@ -11,7 +11,11 @@ const validateToken = (req, res, next) => {
         try {
             const token = headerToken.slice(7);
             // console.log(token);        
-            jsonwebtoken_1.default.verify(token, process.env.SECRET_KEY || 'TSE-Edaniel-Valencia');
+            // Verify and attach decoded payload to request for downstream handlers
+            const secret = process.env.SECRET_KEY || 'TSE-Edaniel-Valencia';
+            const decoded = jsonwebtoken_1.default.verify(token, secret);
+            // attach to request as `user`
+            req.user = decoded;
             next();
         }
         catch (error) {

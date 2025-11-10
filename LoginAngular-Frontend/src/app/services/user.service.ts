@@ -19,10 +19,31 @@ export class UserService {
   }
 
   signIn(user: User): Observable<any>{
-    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/register`, user);
+    // Map frontend User to backend DTO (U* fields)
+    const dto: any = {
+      Uname: user.firstName ?? user.Uname,
+      Ulastname: user.lastName ?? user.Ulastname,
+      Uemail: user.email ?? user.Uemail,
+      Upassword: user.password ?? user.Upassword,
+      Ucredential: user.credential ?? user.Ucredential
+    };
+    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/register`, dto);
   }
   login(user: User): Observable<string>{
-    return this.http.post<string>(`${this.myAppUrl}${this.myAPIUrl}/login`, user);
+    // Backend expects Uemail and Upassword
+    const dto: any = {
+      Uemail: user.email ?? user.Uemail,
+      Upassword: user.password ?? user.Upassword
+    };
+    return this.http.post<string>(`${this.myAppUrl}${this.myAPIUrl}/login`, dto);
+  }
+
+  getProfile(): Observable<User> {
+    return this.http.get<User>(`${this.myAppUrl}${this.myAPIUrl}/profile`);
+  }
+
+  updateProfile(user: User): Observable<User> {
+    return this.http.put<User>(`${this.myAppUrl}${this.myAPIUrl}/profile`, user);
   }
   
 }

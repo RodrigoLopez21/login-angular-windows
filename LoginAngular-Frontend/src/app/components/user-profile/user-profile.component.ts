@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { UserService } from '../../services/user.service';
+import { User } from '../../interfaces/user';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-user-profile',
@@ -16,7 +19,9 @@ export class UserProfileComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private userService: UserService,
+    private toastr: ToastrService
   ) {
     this.profileForm = this.createForm();
   }
@@ -47,20 +52,24 @@ export class UserProfileComponent implements OnInit {
   }
 
   loadUserData(): void {
-    // Simular carga de datos del usuario (reemplaza con tu API real)
-    const userData = {
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      username: 'juanperez',
-      email: 'juan@example.com'
-    };
-
-    this.profileForm.patchValue(userData);
-    
-    // Deshabilitar el formulario inicialmente
-    if (!this.isEditing) {
-      this.profileForm.disable();
-    }
+    this.userService.getProfile().subscribe({
+      next: (user: User) => {
+        this.profileForm.patchValue({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          email: user.email
+        });
+        
+        if (!this.isEditing) {
+          this.profileForm.disable();
+        }
+      },
+      error: (error) => {
+        this.toastr.error('Error al cargar los datos del perfil');
+        console.error('Error:', error);
+      }
+    });
   }
 
   toggleEdit(): void {
@@ -82,41 +91,48 @@ export class UserProfileComponent implements OnInit {
     if (this.profileForm.valid) {
       this.isLoading = true;
       
-      // Preparar datos para enviar
-      const formData = { ...this.profileForm.value };
+      const formData: User = {
+        firstName: this.profileForm.value.firstName,
+        lastName: this.profileForm.value.lastName,
+        username: this.profileForm.value.username,
+        email: this.profileForm.value.email,
+        // Mapear a los campos del backend
+        Uname: this.profileForm.value.firstName,
+        Ulastname: this.profileForm.value.lastName,
+        Uemail: this.profileForm.value.email
+      };
       
-      // Si no se cambió la contraseña, eliminar campos de password
-      if (!formData.password) {
-        delete formData.password;
-        delete formData.confirmPassword;
+      if (this.profileForm.value.password) {
+        formData.password = this.profileForm.value.password;
+        formData.Upassword = this.profileForm.value.password;
       }
 
-      // Simular llamada a API (reemplaza con tu servicio real)
-      setTimeout(() => {
-        this.isLoading = false;
-        
-        // Simular éxito (en un caso real, verificar respuesta de API)
-        this.message = 'Perfil actualizado correctamente';
-        this.messageType = 'success';
-        this.isEditing = false;
-        this.profileForm.disable();
-        
-        // Limpiar campos de contraseña
-        this.profileForm.patchValue({
-          password: '',
-          confirmPassword: ''
-        });
-        
-        // Ocultar mensaje después de 3 segundos
-        setTimeout(() => {
-          this.message = '';
-        }, 3000);
-        
-      }, 1500);
+      this.userService.updateProfile(formData).subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          this.toastr.success('Perfil actualizado correctamente');
+          this.isEditing = false;
+          this.profileForm.disable();
+          
+          // Limpiar campos de contraseña
+          this.profileForm.patchValue({
+            password: '',
+            confirmPassword: ''
+          });
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.toastr.error('Error al actualizar el perfil');
+          console.error('Error:', error);
+        }
+      });
     } else {
-      // Marcar todos los campos como touched para mostrar errores
       Object.keys(this.profileForm.controls).forEach(key => {
-        this.profileForm.get(key)?.markAsTouched();
+        const control = this.profileForm.get(key);
+        if (control?.invalid) {
+          control.markAsTouched();
+          this.toastr.error(`El campo ${key} es inválido`);
+        }
       });
     }
   }
