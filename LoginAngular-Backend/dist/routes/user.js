@@ -13,4 +13,6 @@ router.post("/api/user/register", user_1.CreateUser);
 router.post("/api/user/login", user_1.LoginUser);
 router.get("/api/user/profile", validateToken_1.default, user_1.getProfile);
 router.put("/api/user/profile", validateToken_1.default, user_1.updateProfile);
+router.post('/api/user/verify-request', validateToken_1.default, user_1.requestVerification);
+router.post('/api/user/verify-confirm', validateToken_1.default, user_1.confirmVerification);
 exports.default = router;

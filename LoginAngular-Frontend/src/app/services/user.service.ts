@@ -45,5 +45,13 @@ export class UserService {
   updateProfile(user: User): Observable<User> {
     return this.http.put<User>(`${this.myAppUrl}${this.myAPIUrl}/profile`, user);
   }
+
+  requestVerification(type: 'email' | 'password' | 'phone', newValue?: string): Observable<any> {
+    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/verify-request`, { type, newValue });
+  }
+
+  confirmVerification(type: 'email' | 'password' | 'phone', code: string, newValue?: string, newPassword?: string): Observable<any> {
+    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/verify-confirm`, { type, code, newValue, newPassword });
+  }
   
 }

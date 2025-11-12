@@ -16,6 +16,7 @@ export class UserProfileComponent implements OnInit {
   isLoading = false;
   message = '';
   messageType: 'success' | 'error' = 'success';
+  currentUser: User | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -54,6 +55,7 @@ export class UserProfileComponent implements OnInit {
   loadUserData(): void {
     this.userService.getProfile().subscribe({
       next: (user: User) => {
+        this.currentUser = user;
         this.profileForm.patchValue({
           firstName: user.firstName,
           lastName: user.lastName,
@@ -91,41 +93,117 @@ export class UserProfileComponent implements OnInit {
     if (this.profileForm.valid) {
       this.isLoading = true;
       
-      const formData: User = {
+      // Prepare non-sensitive data to update directly
+      const basicUpdate: User = {
         firstName: this.profileForm.value.firstName,
         lastName: this.profileForm.value.lastName,
         username: this.profileForm.value.username,
-        email: this.profileForm.value.email,
-        // Mapear a los campos del backend
-        Uname: this.profileForm.value.firstName,
-        Ulastname: this.profileForm.value.lastName,
-        Uemail: this.profileForm.value.email
+        // map to backend via service
       };
-      
-      if (this.profileForm.value.password) {
-        formData.password = this.profileForm.value.password;
-        formData.Upassword = this.profileForm.value.password;
-      }
 
-      this.userService.updateProfile(formData).subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          this.toastr.success('Perfil actualizado correctamente');
-          this.isEditing = false;
-          this.profileForm.disable();
-          
-          // Limpiar campos de contraseña
-          this.profileForm.patchValue({
-            password: '',
-            confirmPassword: ''
-          });
-        },
-        error: (error) => {
-          this.isLoading = false;
-          this.toastr.error('Error al actualizar el perfil');
-          console.error('Error:', error);
+      // Detect sensitive changes
+      const newEmail = this.profileForm.value.email;
+      const newPassword = this.profileForm.value.password;
+      const phoneChanged = false; // placeholder if you later add phone field
+
+      const emailChanged = this.currentUser && newEmail !== this.currentUser.email;
+      const passwordProvided = !!newPassword;
+
+      const finalizeBasicUpdate = () => {
+        // call updateProfile for non-sensitive fields
+        // Note: if email or password was changed via verification, backend already updated it
+        // so we only update firstName, lastName, username
+        const dto: any = {
+          firstName: basicUpdate.firstName,
+          lastName: basicUpdate.lastName,
+          username: basicUpdate.username
+          // DON'T include email or password here if they were verified separately
+        };
+        
+        // If no sensitive change happened, include email
+        if (!emailChanged && !passwordProvided) {
+          dto.email = newEmail;
         }
-      });
+
+        this.userService.updateProfile(dto).subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.toastr.success('Perfil actualizado correctamente');
+            this.isEditing = false;
+            this.profileForm.disable();
+            this.profileForm.patchValue({ password: '', confirmPassword: '' });
+            // reload user data
+            this.loadUserData();
+          },
+          error: (error) => {
+            this.isLoading = false;
+            this.toastr.error('Error al actualizar el perfil');
+            console.error('Error:', error);
+          }
+        });
+      };
+
+      const runVerificationThenFinalize = async (type: 'email' | 'password' | 'phone') => {
+        try {
+          if (type === 'email') {
+            await this.userService.requestVerification('email', newEmail).toPromise();
+            const code = window.prompt('Se ha enviado un código a tu correo. Introduce el código para confirmar el cambio de email:');
+            if (!code) {
+              this.isLoading = false;
+              this.toastr.info('Operación cancelada');
+              return;
+            }
+            const response: any = await this.userService.confirmVerification('email', code, newEmail).toPromise();
+            // Update current user with verified data
+            if (response?.user) {
+              this.currentUser = response.user;
+              this.profileForm.patchValue({
+                email: response.user.email
+              });
+            }
+          } else if (type === 'password') {
+            await this.userService.requestVerification('password').toPromise();
+            const code = window.prompt('Se ha enviado un código a tu correo. Introduce el código para confirmar el cambio de contraseña:');
+            if (!code) {
+              this.isLoading = false;
+              this.toastr.info('Operación cancelada');
+              return;
+            }
+            await this.userService.confirmVerification('password', code, undefined, newPassword).toPromise();
+          } else if (type === 'phone') {
+            // phone flow (if you add phone field)
+            const newPhone = this.profileForm.value['phone'];
+            await this.userService.requestVerification('phone', newPhone).toPromise();
+            const code = window.prompt('Se ha enviado un código a tu correo. Introduce el código para confirmar el cambio de teléfono:');
+            if (!code) {
+              this.isLoading = false;
+              this.toastr.info('Operación cancelada');
+              return;
+            }
+            await this.userService.confirmVerification('phone', code, newPhone).toPromise();
+          }
+
+          // After successful sensitive update, finalize other fields
+          finalizeBasicUpdate();
+        } catch (err: any) {
+          this.isLoading = false;
+          const msg = err?.error?.msg || 'Error en verificación';
+          this.toastr.error(msg);
+          console.error('Verification error:', err);
+        }
+      };
+
+      // Decide flow: priority to email, then password, then phone
+      if (emailChanged) {
+        runVerificationThenFinalize('email');
+      } else if (passwordProvided) {
+        runVerificationThenFinalize('password');
+      } else if (phoneChanged) {
+        runVerificationThenFinalize('phone');
+      } else {
+        // only basic update
+        finalizeBasicUpdate();
+      }
     } else {
       Object.keys(this.profileForm.controls).forEach(key => {
         const control = this.profileForm.get(key);

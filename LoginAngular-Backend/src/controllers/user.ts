@@ -13,6 +13,52 @@ interface UserInstance {
     Upassword: string;
     Ucredential: string;
     update: (data: any) => Promise<any>;
+    reload: () => Promise<any>;
+}
+
+// Simple in-memory store for verification codes
+type VerificationEntry = {
+    code: string;
+    newValue?: string;
+    expiresAt: number;
+};
+
+const verificationStore: Map<string, VerificationEntry> = new Map();
+
+async function sendVerificationEmail(to: string, code: string, type: string) {
+    // Try to use nodemailer if available and SMTP env configured, otherwise fallback to console.log
+    try {
+        // Dynamic require so the project doesn't fail if nodemailer isn't installed
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const nodemailer = require('nodemailer');
+        const host = process.env.SMTP_HOST;
+        const port = process.env.SMTP_PORT;
+        const user = process.env.SMTP_USER;
+        const pass = process.env.SMTP_PASS;
+
+        if (host && user && pass) {
+            const transporter = nodemailer.createTransport({
+                host,
+                port: port ? Number(port) : 587,
+                secure: false,
+                auth: { user, pass }
+            });
+
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_FROM || user,
+                to,
+                subject: `Código de verificación (${type})`,
+                text: `Tu código de verificación es: ${code}`
+            });
+            console.log('Verification email sent:', info.messageId);
+            return;
+        }
+    } catch (e) {
+        // nodemailer not configured/installed - ignore and fallback to console
+    }
+
+    // Fallback: print to server console for development/testing
+    console.log(`Verification code for ${to} (type=${type}): ${code}`);
 }
 
 
@@ -142,19 +188,29 @@ export const updateProfile = async (req: Request, res: Response) => {
             });
         }
 
-        // Actualizar los campos
-        const updateData: any = {
-            Uname: xss(firstName),
-            Ulastname: xss(lastName),
-            Uemail: xss(email)
-        };
+        // Actualizar solo los campos que se proporcionan (no undefined)
+        const updateData: any = {};
+        
+        if (firstName !== undefined && firstName !== null) {
+            updateData.Uname = xss(firstName);
+        }
+        if (lastName !== undefined && lastName !== null) {
+            updateData.Ulastname = xss(lastName);
+        }
+        if (email !== undefined && email !== null) {
+            updateData.Uemail = xss(email);
+        }
 
         // Si se proporciona una nueva contraseña, hashearla
         if (password) {
             updateData.Upassword = await bcrypt.hash(xss(password), 10);
         }
 
-        await user.update(updateData);
+        // Solo actualizar si hay campos para actualizar
+        if (Object.keys(updateData).length > 0) {
+            await user.update(updateData);
+            await user.reload();
+        }
 
         res.json({
             msg: 'Perfil actualizado correctamente',
@@ -171,5 +227,78 @@ export const updateProfile = async (req: Request, res: Response) => {
             msg: 'Error al actualizar el perfil del usuario',
             error
         });
+    }
+}
+
+export const requestVerification = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+        const { type, newValue } = req.body as { type: string; newValue?: string };
+
+        const user = await User.findByPk(userId) as any as UserInstance;
+        if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+
+        // Generate 6-digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const key = `${userId}:${type}`;
+        verificationStore.set(key, { code, newValue, expiresAt });
+
+        // Send code to user's current email (safer) - if changing email this ensures identity
+        const toEmail = user.Uemail;
+        await sendVerificationEmail(toEmail, code, type);
+
+        res.json({ msg: 'Código de verificación enviado' });
+    } catch (error) {
+        console.error('requestVerification error:', error);
+        res.status(500).json({ msg: 'Error al solicitar verificación', error });
+    }
+}
+
+export const confirmVerification = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+        const { type, code, newValue, newPassword } = req.body as any;
+        const key = `${userId}:${type}`;
+        const entry = verificationStore.get(key);
+        if (!entry) return res.status(400).json({ msg: 'Código no encontrado o expirado' });
+        if (entry.expiresAt < Date.now()) {
+            verificationStore.delete(key);
+            return res.status(400).json({ msg: 'Código expirado' });
+        }
+        if (entry.code !== String(code)) return res.status(400).json({ msg: 'Código inválido' });
+
+        const user = await User.findByPk(userId) as any as UserInstance;
+        if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+
+        // Apply the requested change
+        const updateData: any = {};
+        if (type === 'email') {
+            updateData.Uemail = xss(newValue ?? entry.newValue);
+        } else if (type === 'password') {
+            const pw = newPassword ?? entry.newValue;
+            if (!pw) return res.status(400).json({ msg: 'Nueva contraseña requerida' });
+            updateData.Upassword = await bcrypt.hash(xss(pw), 10);
+        } else if (type === 'phone') {
+            updateData.Uphone = xss(newValue ?? entry.newValue);
+        }
+
+        await user.update(updateData);
+        await user.reload();
+        verificationStore.delete(key);
+
+        res.json({ 
+            msg: 'Verificación exitosa y dato actualizado',
+            user: {
+                id: user.Uid,
+                firstName: user.Uname,
+                lastName: user.Ulastname,
+                email: user.Uemail,
+                username: user.Ucredential
+            }
+        });
+    } catch (error) {
+        console.error('confirmVerification error:', error);
+        res.status(500).json({ msg: 'Error al confirmar verificación', error });
     }
 }

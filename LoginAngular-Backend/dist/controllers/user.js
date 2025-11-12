@@ -12,11 +12,47 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProfile = exports.getProfile = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getProfile = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const xss_1 = __importDefault(require("xss"));
+const verificationStore = new Map();
+function sendVerificationEmail(to, code, type) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Try to use nodemailer if available and SMTP env configured, otherwise fallback to console.log
+        try {
+            // Dynamic require so the project doesn't fail if nodemailer isn't installed
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const nodemailer = require('nodemailer');
+            const host = process.env.SMTP_HOST;
+            const port = process.env.SMTP_PORT;
+            const user = process.env.SMTP_USER;
+            const pass = process.env.SMTP_PASS;
+            if (host && user && pass) {
+                const transporter = nodemailer.createTransport({
+                    host,
+                    port: port ? Number(port) : 587,
+                    secure: false,
+                    auth: { user, pass }
+                });
+                const info = yield transporter.sendMail({
+                    from: process.env.SMTP_FROM || user,
+                    to,
+                    subject: `Código de verificación (${type})`,
+                    text: `Tu código de verificación es: ${code}`
+                });
+                console.log('Verification email sent:', info.messageId);
+                return;
+            }
+        }
+        catch (e) {
+            // nodemailer not configured/installed - ignore and fallback to console
+        }
+        // Fallback: print to server console for development/testing
+        console.log(`Verification code for ${to} (type=${type}): ${code}`);
+    });
+}
 const ReadUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const listUser = yield user_1.User.findAll();
     res.json({
@@ -129,17 +165,26 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 msg: 'Usuario no encontrado'
             });
         }
-        // Actualizar los campos
-        const updateData = {
-            Uname: (0, xss_1.default)(firstName),
-            Ulastname: (0, xss_1.default)(lastName),
-            Uemail: (0, xss_1.default)(email)
-        };
+        // Actualizar solo los campos que se proporcionan (no undefined)
+        const updateData = {};
+        if (firstName !== undefined && firstName !== null) {
+            updateData.Uname = (0, xss_1.default)(firstName);
+        }
+        if (lastName !== undefined && lastName !== null) {
+            updateData.Ulastname = (0, xss_1.default)(lastName);
+        }
+        if (email !== undefined && email !== null) {
+            updateData.Uemail = (0, xss_1.default)(email);
+        }
         // Si se proporciona una nueva contraseña, hashearla
         if (password) {
             updateData.Upassword = yield bcryptjs_1.default.hash((0, xss_1.default)(password), 10);
         }
-        yield user.update(updateData);
+        // Solo actualizar si hay campos para actualizar
+        if (Object.keys(updateData).length > 0) {
+            yield user.update(updateData);
+            yield user.reload();
+        }
         res.json({
             msg: 'Perfil actualizado correctamente',
             user: {
@@ -159,3 +204,77 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateProfile = updateProfile;
+const requestVerification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        const { type, newValue } = req.body;
+        const user = yield user_1.User.findByPk(userId);
+        if (!user)
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        // Generate 6-digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const key = `${userId}:${type}`;
+        verificationStore.set(key, { code, newValue, expiresAt });
+        // Send code to user's current email (safer) - if changing email this ensures identity
+        const toEmail = user.Uemail;
+        yield sendVerificationEmail(toEmail, code, type);
+        res.json({ msg: 'Código de verificación enviado' });
+    }
+    catch (error) {
+        console.error('requestVerification error:', error);
+        res.status(500).json({ msg: 'Error al solicitar verificación', error });
+    }
+});
+exports.requestVerification = requestVerification;
+const confirmVerification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        const { type, code, newValue, newPassword } = req.body;
+        const key = `${userId}:${type}`;
+        const entry = verificationStore.get(key);
+        if (!entry)
+            return res.status(400).json({ msg: 'Código no encontrado o expirado' });
+        if (entry.expiresAt < Date.now()) {
+            verificationStore.delete(key);
+            return res.status(400).json({ msg: 'Código expirado' });
+        }
+        if (entry.code !== String(code))
+            return res.status(400).json({ msg: 'Código inválido' });
+        const user = yield user_1.User.findByPk(userId);
+        if (!user)
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        // Apply the requested change
+        const updateData = {};
+        if (type === 'email') {
+            updateData.Uemail = (0, xss_1.default)(newValue !== null && newValue !== void 0 ? newValue : entry.newValue);
+        }
+        else if (type === 'password') {
+            const pw = newPassword !== null && newPassword !== void 0 ? newPassword : entry.newValue;
+            if (!pw)
+                return res.status(400).json({ msg: 'Nueva contraseña requerida' });
+            updateData.Upassword = yield bcryptjs_1.default.hash((0, xss_1.default)(pw), 10);
+        }
+        else if (type === 'phone') {
+            updateData.Uphone = (0, xss_1.default)(newValue !== null && newValue !== void 0 ? newValue : entry.newValue);
+        }
+        yield user.update(updateData);
+        yield user.reload();
+        verificationStore.delete(key);
+        res.json({
+            msg: 'Verificación exitosa y dato actualizado',
+            user: {
+                id: user.Uid,
+                firstName: user.Uname,
+                lastName: user.Ulastname,
+                email: user.Uemail,
+                username: user.Ucredential
+            }
+        });
+    }
+    catch (error) {
+        console.error('confirmVerification error:', error);
+        res.status(500).json({ msg: 'Error al confirmar verificación', error });
+    }
+});
+exports.confirmVerification = confirmVerification;
