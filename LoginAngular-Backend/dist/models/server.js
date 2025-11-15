@@ -42,10 +42,17 @@ class Server {
         this.app.use(user_1.default);
     }
     midlewares() {
-        //Parseo BOdy
+        // Parseo del body
         this.app.use(express_1.default.json());
-        //
+        // CORS
         this.app.use((0, cors_1.default)());
+        // 🔐 Evitar MIME Sniffing
+        this.app.use((req, res, next) => {
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            next();
+        });
+        // 🔐 Ocultar que la app corre en Express
+        this.app.disable("x-powered-by");
     }
     initialize() {
         return __awaiter(this, void 0, void 0, function* () {

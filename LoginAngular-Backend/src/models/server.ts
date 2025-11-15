@@ -36,12 +36,21 @@ class Server {
         this.app.use(routesUser);
     }
 
-    midlewares(){
-        //Parseo BOdy
-        this.app.use(express.json())
-        
-        //
-        this.app.use(cors())
+    midlewares() {
+        // Parseo del body
+        this.app.use(express.json());
+
+        // CORS
+        this.app.use(cors());
+
+        // 🔐 Evitar MIME Sniffing
+        this.app.use((req, res, next) => {
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            next();
+        });
+
+        // 🔐 Ocultar que la app corre en Express
+        this.app.disable("x-powered-by");
     }
 
     async initialize() {
