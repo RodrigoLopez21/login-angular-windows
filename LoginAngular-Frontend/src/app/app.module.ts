@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 
@@ -15,6 +15,7 @@ import { MaintenanceComponent } from './components/maintenance/maintenance.compo
 import { ProductComponent } from './components/dashboard/product/product.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ErrorPageComponent } from './components/error-page/error-page.component';
+import { SecurityService } from './services/security.service';
 
 // TOAST CON ANIMACIONES
 import { CommonModule } from '@angular/common';
@@ -23,6 +24,19 @@ import { ToastrModule } from 'ngx-toastr';
 import { AddTokenInterceptor } from './utils/add-token.interceptor';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
+
+// Inicializar seguridad
+export function initializeSecurity(securityService: SecurityService) {
+  return (): Promise<void> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        securityService.preventClickjacking();
+        resolve();
+      }, 100);
+    });
+  };
+}
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -54,6 +68,13 @@ import { UserProfileComponent } from './components/user-profile/user-profile.com
     { 
       provide: HTTP_INTERCEPTORS,
       useClass: AddTokenInterceptor,
+      multi: true
+    },
+
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeSecurity,
+      deps: [SecurityService],
       multi: true
     }
   ],
