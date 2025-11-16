@@ -1,14 +1,11 @@
 import express, {Application} from 'express'
 import cors from 'cors'
-import { testConnection } from '../database/connection'
-import routesCategoty from '../routes/category'
+import helmet from 'helmet'
+import sequelize, { testConnection } from '../database/connection'
+import routesCategory from '../routes/category'
 import routesProduct from '../routes/product'
 import routesRole from '../routes/role'
 import routesUser from '../routes/user'
-import { Category } from './category'
-import { Product } from './product'
-import { Role } from './role'
-import { User } from './user'
 
 class Server {
 
@@ -19,7 +16,7 @@ class Server {
         this.app = express()
         this.port = process.env.PORT || '3001'
 
-        this.midlewares();
+        this.middlewares();
         this.router();
     }
 
@@ -30,27 +27,21 @@ class Server {
     }
 
     router(){
-        this.app.use(routesCategoty);
+        this.app.use(routesCategory);
         this.app.use(routesProduct);
         this.app.use(routesRole);
         this.app.use(routesUser);
     }
 
-    midlewares() {
+    middlewares() {
         // Parseo del body
         this.app.use(express.json());
 
         // CORS
         this.app.use(cors());
 
-        // 🔐 Evitar MIME Sniffing
-        this.app.use((req, res, next) => {
-            res.setHeader("X-Content-Type-Options", "nosniff");
-            next();
-        });
-
-        // 🔐 Ocultar que la app corre en Express
-        this.app.disable("x-powered-by");
+        // 🔐 Cabeceras de Seguridad con Helmet
+        this.app.use(helmet());
     }
 
     async initialize() {
@@ -68,13 +59,10 @@ class Server {
 
     async DBconnetc(){
         try {
-
-            // await Product.sync({force: true}); // Clean date of table
-            await Category.sync(); 
-            await Product.sync(); 
-            // await User.sync({alter: true}); // Update atribute of table
-            await Role.sync(); 
-            await User.sync(); 
+            // Sincronizamos TODOS los modelos de una sola vez.
+            // En producción, es mejor usar migraciones en lugar de sync().
+            await sequelize.sync();
+            console.log('Todos los modelos fueron sincronizados exitosamente.');
             await testConnection(); // Reutilizamos la función para mostrar el mensaje de éxito
         
         } catch (error) {

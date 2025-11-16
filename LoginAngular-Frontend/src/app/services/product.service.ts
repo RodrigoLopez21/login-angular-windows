@@ -19,35 +19,29 @@ export class ProductService {
   }
 
   getProducts(): Observable<Product[]> {
-    console.log(`${this.myAppUrl}${this.myAPIUrl}/read`);
     return this.http.get<Product[]>(`${this.myAppUrl}${this.myAPIUrl}/read`);
-
-    //USAR PARA LA PRIMERA PARTE
-
-    // const token = localStorage.getItem('token')
-    // const headers = new HttpHeaders().set('Authorization', `Bearer  ${token}`)
-    // return this.http.get<Product[]>(`${this.myAppUrl}${this.myAPIUrl}/product/getProducts`, {headers: headers});
-
-    // NETWORK - fetch/xhr - getProduc
-
-
   }
 
 
   register(product: Product): Observable<any> {
-    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/create`, product);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/create`, product, { headers: headers });
   }
 
   update(product: Product): Observable<any> {    
-    return this.http.patch(`${this.myAppUrl}${this.myAPIUrl}/update/${product.Pid}`, product);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.patch(`${this.myAppUrl}${this.myAPIUrl}/update/${product.Pid}`, product, { headers: headers });
   }
   
   delete(product: Product): Observable<any> {    
-    return this.http.delete(`${this.myAppUrl}${this.myAPIUrl}/delete/${product.Pid}`);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.delete(`${this.myAppUrl}${this.myAPIUrl}/delete/${product.Pid}`, { headers: headers });
   }
 
 
   
-
   
 }

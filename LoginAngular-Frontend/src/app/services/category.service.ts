@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environments } from 'src/environments/environment';
@@ -22,14 +22,20 @@ export class CategoryService {
   }
 
   createCategory(category: Category): Observable<any> {
-    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/create`, category);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/create`, category, { headers: headers });
   }
 
   updateCategory(category: Category): Observable<any> {    
-    return this.http.patch(`${this.myAppUrl}${this.myAPIUrl}/update/${category.Cid}`, category);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.patch(`${this.myAppUrl}${this.myAPIUrl}/update/${category.Cid}`, category, { headers: headers });
   }
   
   deleteCategory(category: Category): Observable<any> {    
-    return this.http.delete(`${this.myAppUrl}${this.myAPIUrl}/delete/${category.Cid}`);
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.delete(`${this.myAppUrl}${this.myAPIUrl}/delete/${category.Cid}`, { headers: headers });
   }
 }
