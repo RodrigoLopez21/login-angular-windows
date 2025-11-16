@@ -135,7 +135,41 @@ export const LoginUser = async (req: Request, res: Response) => {
         })
     }
 
-    // Incluye id, email y rol en el token
+    // Instead of issuing a token, start 2FA
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const key = `${user.Uid}:login`;
+    verificationStore.set(key, { code, expiresAt });
+
+    await sendVerificationEmail(user.Uemail, code, 'login');
+
+    res.json({
+        msg: 'Verification required',
+        twoFactorRequired: true,
+        email: user.Uemail
+    });
+}
+
+export const LoginVerify = async (req: Request, res: Response) => {
+    const { email, code } = req.body;
+
+    const user: any = await User.findOne({ where: { Uemail: email } });
+    if (!user) {
+        return res.status(400).json({ msg: `Usuario no existe con el email ${email}` });
+    }
+
+    const key = `${user.Uid}:login`;
+    const entry = verificationStore.get(key);
+
+    if (!entry) return res.status(400).json({ msg: 'Código no encontrado o expirado' });
+    if (entry.expiresAt < Date.now()) {
+        verificationStore.delete(key);
+        return res.status(400).json({ msg: 'Código expirado' });
+    }
+    if (entry.code !== String(code)) return res.status(400).json({ msg: 'Código inválido' });
+
+    verificationStore.delete(key); // Code is single-use
+
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
         console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
@@ -144,7 +178,7 @@ export const LoginUser = async (req: Request, res: Response) => {
     const token = jwt.sign({
         id: user.Uid,
         email: user.Uemail,
-        rol: user.Ucredential 
+        rol: user.Ucredential
     }, secretKey);
     res.json({ token });
 }

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getProfile = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -115,7 +115,36 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             msg: `Password Incorrecto => ${Upassword}`
         });
     }
-    // Incluye id, email y rol en el token
+    // Instead of issuing a token, start 2FA
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const key = `${user.Uid}:login`;
+    verificationStore.set(key, { code, expiresAt });
+    yield sendVerificationEmail(user.Uemail, code, 'login');
+    res.json({
+        msg: 'Verification required',
+        twoFactorRequired: true,
+        email: user.Uemail
+    });
+});
+exports.LoginUser = LoginUser;
+const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, code } = req.body;
+    const user = yield user_1.User.findOne({ where: { Uemail: email } });
+    if (!user) {
+        return res.status(400).json({ msg: `Usuario no existe con el email ${email}` });
+    }
+    const key = `${user.Uid}:login`;
+    const entry = verificationStore.get(key);
+    if (!entry)
+        return res.status(400).json({ msg: 'Código no encontrado o expirado' });
+    if (entry.expiresAt < Date.now()) {
+        verificationStore.delete(key);
+        return res.status(400).json({ msg: 'Código expirado' });
+    }
+    if (entry.code !== String(code))
+        return res.status(400).json({ msg: 'Código inválido' });
+    verificationStore.delete(key); // Code is single-use
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
         console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
@@ -128,7 +157,7 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }, secretKey);
     res.json({ token });
 });
-exports.LoginUser = LoginUser;
+exports.LoginVerify = LoginVerify;
 const getProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.id; // Obtiene el ID del usuario del token

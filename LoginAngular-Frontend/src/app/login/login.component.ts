@@ -15,7 +15,9 @@ export class LoginComponent  implements OnInit{
 
   email: string = '';
   password: string = '';
+  code: string = '';
   loading: boolean = false;
+  twoFactorRequired: boolean = false;
 
   constructor(
     private toastr: ToastrService,
@@ -40,19 +42,43 @@ export class LoginComponent  implements OnInit{
 
     this._userService.login(user).subscribe({
       next: (response: any) => {
-        this.loading =  false
-  const token = response.token
-      //  console.log(token);     
-        this.toastr.success("", "Bienvenido")
-        localStorage.setItem('myToken',token) 
-       // this.router.navigate(['/admin/product/listProduct']) para el Admin
-         this.router.navigate(['/user/dashboard']) 
+        this.loading =  false;
+        if (response.twoFactorRequired) {
+          this.twoFactorRequired = true;
+          this.toastr.info('Se ha enviado un código de verificación a su correo.');
+        } else {
+          const token = response.token;
+          this.toastr.success("", "Bienvenido");
+          localStorage.setItem('myToken',token);
+          this.router.navigate(['/user/dashboard']);
+        }
       },
       error: (e: HttpErrorResponse) => {
         this.loading =  false
         this._errorService.msgError(e)
       },
     })   
+  }
+
+  verifyCode() {
+    if (this.code == '') {
+      this.toastr.error('El código es obligatorio!', 'Error');
+      return;
+    }
+    this.loading = true;
+    this._userService.loginVerify(this.email, this.code).subscribe({
+      next: (response: any) => {
+        this.loading = false;
+        const token = response.token;
+        this.toastr.success("", "Bienvenido");
+        localStorage.setItem('myToken', token);
+        this.router.navigate(['/user/dashboard']);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.loading = false;
+        this._errorService.msgError(e);
+      }
+    });
   }
 
 }

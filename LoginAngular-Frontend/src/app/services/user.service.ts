@@ -29,13 +29,17 @@ export class UserService {
     };
     return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/register`, dto);
   }
-  login(user: User): Observable<string>{
+  login(user: User): Observable<any>{ // Return type is now any
     // Backend expects Uemail and Upassword
     const dto: any = {
       Uemail: user.email ?? user.Uemail,
       Upassword: user.password ?? user.Upassword
     };
-    return this.http.post<string>(`${this.myAppUrl}${this.myAPIUrl}/login`, dto);
+    return this.http.post<any>(`${this.myAppUrl}${this.myAPIUrl}/login`, dto);
+  }
+
+  loginVerify(email: string, code: string): Observable<string> {
+    return this.http.post<string>(`${this.myAppUrl}${this.myAPIUrl}/login/verify`, { email, code });
   }
 
   getProfile(): Observable<User> {
