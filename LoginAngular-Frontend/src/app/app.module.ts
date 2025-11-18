@@ -25,6 +25,7 @@ import { AddTokenInterceptor } from './utils/add-token.interceptor';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
+import { AdminUsersComponent } from './components/admin-users/admin-users.component';
 
 // Inicializar seguridad
 export function initializeSecurity(securityService: SecurityService) {
@@ -50,7 +51,8 @@ export function initializeSecurity(securityService: SecurityService) {
     ErrorPageComponent,
     UserDashboardComponent,
     UserProfileComponent,
-    AdminDashboardComponent    
+    AdminDashboardComponent,
+    AdminUsersComponent    
   ],
   imports: [
     BrowserModule,

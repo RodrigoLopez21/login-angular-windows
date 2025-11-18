@@ -61,5 +61,9 @@ export class UserService {
   getRole(): Observable<any> {
     return this.http.get<any>(`${this.myAppUrl}${this.myAPIUrl}/role`);
   }
+
+  getAllUsers(): Observable<any> {
+    return this.http.get<any>(`${this.myAppUrl}${this.myAPIUrl}/read`);
+  }
   
 }
