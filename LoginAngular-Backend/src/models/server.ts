@@ -6,6 +6,7 @@ import routesCategory from '../routes/category'
 import routesProduct from '../routes/product'
 import routesRole from '../routes/role'
 import routesUser from '../routes/user'
+import routesLoginHistory from '../routes/login_history'
 
 class Server {
 
@@ -31,6 +32,7 @@ class Server {
         this.app.use(routesProduct);
         this.app.use(routesRole);
         this.app.use(routesUser);
+        this.app.use(routesLoginHistory);
     }
 
     middlewares() {

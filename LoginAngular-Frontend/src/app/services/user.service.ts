@@ -38,8 +38,8 @@ export class UserService {
     return this.http.post<any>(`${this.myAppUrl}${this.myAPIUrl}/login`, dto);
   }
 
-  loginVerify(email: string, code: string): Observable<string> {
-    return this.http.post<string>(`${this.myAppUrl}${this.myAPIUrl}/login/verify`, { email, code });
+  loginVerify(email: string, code: string): Observable<any> {
+    return this.http.post<any>(`${this.myAppUrl}${this.myAPIUrl}/login/verify`, { email, code });
   }
 
   getProfile(): Observable<User> {
@@ -64,6 +64,26 @@ export class UserService {
 
   getAllUsers(): Observable<any> {
     return this.http.get<any>(`${this.myAppUrl}${this.myAPIUrl}/read`);
+  }
+
+  getLoginHistory(userId: number): Observable<any> {
+    return this.http.get<any>(`${this.myAppUrl}api/login-history/user/${userId}`);
+  }
+
+  getLoginHistoryAll(): Observable<any> {
+    return this.http.get<any>(`${this.myAppUrl}api/login-history/all`);
+  }
+
+  createLoginHistory(userId: number): Observable<any> {
+    return this.http.post<any>(`${this.myAppUrl}api/login-history/create`, { Uid: userId });
+  }
+
+  recordLogout(loginHistoryId: number): Observable<any> {
+    return this.http.patch<any>(`${this.myAppUrl}api/login-history/logout/${loginHistoryId}`, {});
+  }
+
+  updateUserStatus(userId: number, status: number): Observable<any> {
+    return this.http.put<any>(`${this.myAppUrl}${this.myAPIUrl}/status/${userId}`, { Ustatus: status });
   }
   
 }

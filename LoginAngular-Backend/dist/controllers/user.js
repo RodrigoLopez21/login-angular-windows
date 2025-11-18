@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.updateUserStatus = exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -109,6 +109,10 @@ const LoginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             msg: `Usuario no existe con el email ${Uemail}`
         });
     }
+    // Block login for inactive users
+    if (user.Ustatus !== 1) {
+        return res.status(403).json({ msg: 'Usuario inactivo. Contacte al administrador.' });
+    }
     const passwordValid = yield bcryptjs_1.default.compare(Upassword, user.Upassword);
     if (!passwordValid) {
         return res.status(400).json({
@@ -134,6 +138,10 @@ const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     if (!user) {
         return res.status(400).json({ msg: `Usuario no existe con el email ${email}` });
     }
+    // Prevent token issuance for inactive users
+    if (user.Ustatus !== 1) {
+        return res.status(403).json({ msg: 'Usuario inactivo. Contacte al administrador.' });
+    }
     const key = `${user.Uid}:login`;
     const entry = verificationStore.get(key);
     if (!entry)
@@ -150,6 +158,22 @@ const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     const { UserHasRoles } = require('../models/user_has_roles');
     const userRole = yield UserHasRoles.findOne({ where: { Uid: user.Uid } });
     const rid = userRole ? userRole.Rid : 2; // Default to 2 (User)
+    // Record login history and capture id so frontend can later mark logout
+    let loginHistoryId = null;
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { LoginHistory } = require('../models/login_history');
+        const history = yield LoginHistory.create({
+            Uid: user.Uid,
+            Lhlogin_time: new Date()
+        });
+        if (history && history.Lhid)
+            loginHistoryId = history.Lhid;
+    }
+    catch (error) {
+        console.error('Error recording login history:', error);
+        // Don't fail login if history recording fails
+    }
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
         console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
@@ -161,7 +185,8 @@ const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         rid: rid,
         rol: user.Ucredential
     }, secretKey);
-    res.json({ token });
+    // Return token and loginHistoryId (if available) so frontend can record logout
+    res.json({ token, loginHistoryId });
 });
 exports.LoginVerify = LoginVerify;
 const getProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -331,3 +356,31 @@ const confirmVerification = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
 });
 exports.confirmVerification = confirmVerification;
+const updateUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Uid } = req.params;
+        const { Ustatus } = req.body;
+        if (Ustatus !== 0 && Ustatus !== 1) {
+            return res.status(400).json({ msg: 'Status debe ser 0 (inactivo) o 1 (activo)' });
+        }
+        const user = yield user_1.User.findByPk(Uid);
+        if (!user) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+        yield user.update({ Ustatus: Ustatus });
+        yield user.reload();
+        res.json({
+            msg: 'Estado del usuario actualizado',
+            user: {
+                Uid: user.Uid,
+                Uname: user.Uname,
+                Ustatus: user.Ustatus
+            }
+        });
+    }
+    catch (error) {
+        console.error('updateUserStatus error:', error);
+        res.status(500).json({ msg: 'Error al actualizar estado del usuario', error });
+    }
+});
+exports.updateUserStatus = updateUserStatus;

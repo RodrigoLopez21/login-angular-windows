@@ -48,9 +48,11 @@ export class LoginComponent  implements OnInit{
           this.twoFactorRequired = true;
           this.toastr.info('Se ha enviado un código de verificación a su correo.');
         } else {
-          const token = response.token;
-          this.toastr.success("", "Bienvenido");
-          localStorage.setItem('myToken',token);
+            const token = response.token;
+            const loginHistoryId = response.loginHistoryId;
+            this.toastr.success("", "Bienvenido");
+            localStorage.setItem('myToken',token);
+            if (loginHistoryId) localStorage.setItem('loginHistoryId', String(loginHistoryId));
           let rid = this.authService.getRoleFromToken();
           if (rid == null) {
             // fallback: ask backend for role (older flow)
@@ -85,8 +87,10 @@ export class LoginComponent  implements OnInit{
       next: (response: any) => {
         this.loading = false;
         const token = response.token;
+        const loginHistoryId = response.loginHistoryId;
         this.toastr.success("", "Bienvenido");
         localStorage.setItem('myToken', token);
+        if (loginHistoryId) localStorage.setItem('loginHistoryId', String(loginHistoryId));
         let rid = this.authService.getRoleFromToken();
         if (rid == null) {
           this._userService.getRole().subscribe({

@@ -53,6 +53,7 @@ const category_1 = __importDefault(require("../routes/category"));
 const product_1 = __importDefault(require("../routes/product"));
 const role_1 = __importDefault(require("../routes/role"));
 const user_1 = __importDefault(require("../routes/user"));
+const login_history_1 = __importDefault(require("../routes/login_history"));
 class Server {
     constructor() {
         this.app = (0, express_1.default)();
@@ -70,6 +71,7 @@ class Server {
         this.app.use(product_1.default);
         this.app.use(role_1.default);
         this.app.use(user_1.default);
+        this.app.use(login_history_1.default);
     }
     middlewares() {
         // Parseo del body
