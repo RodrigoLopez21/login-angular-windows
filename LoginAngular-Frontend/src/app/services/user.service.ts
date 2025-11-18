@@ -85,5 +85,9 @@ export class UserService {
   updateUserStatus(userId: number, status: number): Observable<any> {
     return this.http.put<any>(`${this.myAppUrl}${this.myAPIUrl}/status/${userId}`, { Ustatus: status });
   }
+
+  updateUserRole(userId: number, Rid: number): Observable<any> {
+    return this.http.put<any>(`${this.myAppUrl}${this.myAPIUrl}/role/${userId}`, { Rid });
+  }
   
 }

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserStatus = exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.updateUserStatus = exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.updateUserRole = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -54,11 +54,21 @@ function sendVerificationEmail(to, code, type) {
     });
 }
 const ReadUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const listUser = yield user_1.User.findAll();
-    res.json({
-        msg: `List de categoría encontrada exitosamente`,
-        data: listUser
-    });
+    // Return users together with their role (Rid) from user_has_roles
+    try {
+        const listUser = yield user_1.User.findAll({ raw: true });
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        const mappings = yield UserHasRoles.findAll({ raw: true });
+        const mapByUid = {};
+        mappings.forEach(m => { mapByUid[m.Uid] = m.Rid; });
+        const data = listUser.map(u => { var _a; return (Object.assign(Object.assign({}, u), { Rid: (_a = mapByUid[u.Uid]) !== null && _a !== void 0 ? _a : 2 })); });
+        res.json({ msg: `Lista de usuarios obtenida`, data });
+    }
+    catch (error) {
+        console.error('ReadUser error:', error);
+        res.status(500).json({ msg: 'Error al listar usuarios', error });
+    }
 });
 exports.ReadUser = ReadUser;
 const CreateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -233,6 +243,37 @@ const getUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getUserRole = getUserRole;
+const updateUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Only admins can change roles
+        const requester = req.user;
+        if (!requester || requester.rid !== 1) {
+            return res.status(403).json({ msg: 'Permisos insuficientes' });
+        }
+        const userId = Number(req.params.Uid);
+        const { Rid } = req.body;
+        const newRid = Number(Rid);
+        if (![1, 2].includes(newRid)) {
+            return res.status(400).json({ msg: 'Rid inválido. Debe ser 1 (admin) o 2 (user).' });
+        }
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        const mapping = yield UserHasRoles.findOne({ where: { Uid: userId } });
+        if (!mapping) {
+            // create mapping
+            yield UserHasRoles.create({ Uid: userId, Rid: newRid });
+        }
+        else {
+            yield UserHasRoles.update({ Rid: newRid }, { where: { Uid: userId } });
+        }
+        return res.json({ msg: 'Rol actualizado correctamente', Rid: newRid });
+    }
+    catch (error) {
+        console.error('updateUserRole error:', error);
+        return res.status(500).json({ msg: 'Error al actualizar el rol', error });
+    }
+});
+exports.updateUserRole = updateUserRole;
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.id;

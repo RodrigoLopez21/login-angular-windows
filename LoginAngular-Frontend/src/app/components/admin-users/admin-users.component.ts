@@ -4,6 +4,7 @@ import { UserService } from 'src/app/services/user.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ErrorService } from 'src/app/services/error.service';
 import { ToastrService } from 'ngx-toastr';
+import { AuthService } from 'src/app/services/auth.service';
 
 interface User {
   Uid: number;
@@ -13,6 +14,7 @@ interface User {
   Upassword: string;
   Ucredential: string;
   Ustatus: number;
+  Rid?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -37,15 +39,23 @@ export class AdminUsersComponent implements OnInit {
   loginHistory: LoginRecord[] = [];
   showHistoryModal: boolean = false;
   updatingStatus: { [key: number]: boolean } = {};
+  updatingRole: { [key: number]: boolean } = {};
+  isAdmin: boolean = false;
+  currentRid: number | null = null;
 
   constructor(
     private userService: UserService,
     private errorService: ErrorService,
     private router: Router,
     private toastr: ToastrService
+    , private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // determine if current user is admin to show role controls
+    const rid = this.authService.getRoleFromToken();
+    this.currentRid = rid;
+    this.isAdmin = rid === 1;
     this.loadUsers();
   }
 
@@ -58,7 +68,9 @@ export class AdminUsersComponent implements OnInit {
     this.userService.getAllUsers().subscribe({
       next: (response: any) => {
         this.loading = false;
-        this.users = response.data || response;
+        const raw = response.data || response;
+        // ensure each user object has a Rid (default to 2 = user)
+        this.users = (raw || []).map((u: any) => ({ ...u, Rid: u.Rid !== undefined ? u.Rid : 2 }));
       },
       error: (err: HttpErrorResponse) => {
         this.loading = false;
@@ -95,6 +107,52 @@ export class AdminUsersComponent implements OnInit {
         }
       });
     }
+  }
+
+  changeUserRole(user: User, valueOrEvent: any): void {
+    // support being called with either the raw value or the DOM event
+    let newRid = valueOrEvent;
+    if (valueOrEvent && typeof valueOrEvent === 'number') {
+      newRid = valueOrEvent;
+    } else if (valueOrEvent && valueOrEvent.target) {
+      newRid = Number(valueOrEvent.target.value);
+    } else {
+      newRid = Number(valueOrEvent);
+    }
+    
+    console.log('changeUserRole called with newRid=', newRid, 'user.Rid=', user.Rid, 'user=', user);
+    
+    if (![1,2].includes(newRid)) {
+      console.warn('Invalid Rid:', newRid);
+      return;
+    }
+    if (user.Rid === newRid) {
+      console.log('No change in role');
+      return; // no change
+    }
+
+    if (!confirm(`¿Deseas asignar rol ${newRid === 1 ? 'Admin' : 'User'} a ${user.Uname}?`)) {
+      console.log('User cancelled role change');
+      return;
+    }
+
+    this.updatingRole[user.Uid] = true;
+    console.log('Calling updateUserRole with userId=', user.Uid, 'newRid=', newRid);
+    this.userService.updateUserRole(user.Uid, newRid).subscribe({
+      next: (res: any) => {
+        console.log('Role updated successfully:', res);
+        this.updatingRole[user.Uid] = false;
+        user.Rid = newRid;
+        this.toastr.success('Rol actualizado correctamente');
+        // Optionally refresh list to reflect any permission-dependent changes
+        this.loadUsers();
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('Error updating role:', err);
+        this.updatingRole[user.Uid] = false;
+        this.errorService.msgError(err);
+      }
+    });
   }
 
   viewLoginHistory(user: User): void {

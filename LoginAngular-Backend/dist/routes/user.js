@@ -18,4 +18,5 @@ router.post('/api/user/verify-request', validateToken_1.default, user_1.requestV
 router.post('/api/user/verify-confirm', validateToken_1.default, user_1.confirmVerification);
 router.get('/api/user/role', validateToken_1.default, user_1.getUserRole);
 router.put('/api/user/status/:Uid', validateToken_1.default, user_1.updateUserStatus);
+router.put('/api/user/role/:Uid', validateToken_1.default, user_1.updateUserRole);
 exports.default = router;

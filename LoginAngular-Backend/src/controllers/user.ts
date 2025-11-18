@@ -64,11 +64,22 @@ async function sendVerificationEmail(to: string, code: string, type: string) {
 
 
 export const ReadUser = async (req: Request, res: Response) => {
-    const listUser = await User.findAll();
-    res.json({
-        msg: `List de categoría encontrada exitosamente`,
-        data: listUser
-    });
+    // Return users together with their role (Rid) from user_has_roles
+    try {
+        const listUser = await User.findAll({ raw: true }) as any[];
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        const mappings = await UserHasRoles.findAll({ raw: true }) as any[];
+        const mapByUid: Record<number, number> = {};
+        mappings.forEach(m => { mapByUid[m.Uid] = m.Rid; });
+
+        const data = listUser.map(u => ({ ...u, Rid: mapByUid[u.Uid] ?? 2 }));
+
+        res.json({ msg: `Lista de usuarios obtenida`, data });
+    } catch (error) {
+        console.error('ReadUser error:', error);
+        res.status(500).json({ msg: 'Error al listar usuarios', error });
+    }
 }
 
 
@@ -260,6 +271,39 @@ export const getUserRole = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('getUserRole error:', error);
         return res.status(500).json({ msg: 'Error al obtener el rol del usuario', error });
+    }
+}
+
+export const updateUserRole = async (req: Request, res: Response) => {
+    try {
+        // Only admins can change roles
+        const requester: any = (req as any).user;
+        if (!requester || requester.rid !== 1) {
+            return res.status(403).json({ msg: 'Permisos insuficientes' });
+        }
+
+        const userId = Number(req.params.Uid);
+        const { Rid } = req.body;
+        const newRid = Number(Rid);
+        if (![1, 2].includes(newRid)) {
+            return res.status(400).json({ msg: 'Rid inválido. Debe ser 1 (admin) o 2 (user).' });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+
+        const mapping: any = await UserHasRoles.findOne({ where: { Uid: userId } });
+        if (!mapping) {
+            // create mapping
+            await UserHasRoles.create({ Uid: userId, Rid: newRid });
+        } else {
+            await UserHasRoles.update({ Rid: newRid }, { where: { Uid: userId } });
+        }
+
+        return res.json({ msg: 'Rol actualizado correctamente', Rid: newRid });
+    } catch (error) {
+        console.error('updateUserRole error:', error);
+        return res.status(500).json({ msg: 'Error al actualizar el rol', error });
     }
 }
 
