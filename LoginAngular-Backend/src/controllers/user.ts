@@ -26,7 +26,7 @@ type VerificationEntry = {
 
 const verificationStore: Map<string, VerificationEntry> = new Map();
 
-async function sendVerificationEmail(to: string, code: string, type: string) {
+async function sendVerificationEmail(to: string, code: string, type: string, uid?: number) {
     // Try to use nodemailer if available and SMTP env configured, otherwise fallback to console.log
     try {
         // Dynamic require so the project doesn't fail if nodemailer isn't installed
@@ -37,6 +37,8 @@ async function sendVerificationEmail(to: string, code: string, type: string) {
         const user = process.env.SMTP_USER;
         const pass = process.env.SMTP_PASS;
 
+        console.log('sendVerificationEmail - SMTP config:', { host, port, user: user ? '***' : 'NOT SET', pass: pass ? '***' : 'NOT SET' });
+
         if (host && user && pass) {
             const transporter = nodemailer.createTransport({
                 host,
@@ -45,21 +47,48 @@ async function sendVerificationEmail(to: string, code: string, type: string) {
                 auth: { user, pass }
             });
 
+            let subject = `Código de verificación (${type})`;
+            let text = `Tu código de verificación es: ${code}`;
+
+            // Customize for invitation type
+            if (type.includes('invitation')) {
+                subject = 'Invitación para establecer contraseña';
+                const base = process.env.FRONTEND_URL || 'http://localhost:4200';
+                const link = uid ? `${base}/set-password-invite?uid=${uid}&code=${code}` : `${base}/set-password-invite`;
+                text = `Has sido invitado a la plataforma.\n\nTu código de invitación es: ${code}\n\n` +
+                       `Por favor visita: ${link}\n` +
+                       `E ingresa el código de invitación para establecer tu contraseña.`;
+            }
+
+            console.log('sendVerificationEmail - Sending email:', { to, subject, code });
+
             const info = await transporter.sendMail({
                 from: process.env.SMTP_FROM || user,
                 to,
-                subject: `Código de verificación (${type})`,
-                text: `Tu código de verificación es: ${code}`
+                subject,
+                text
             });
-            console.log('Verification email sent:', info.messageId);
+            console.log('✅ Verification email sent successfully:', info.messageId);
             return;
+        } else {
+            console.warn('⚠️ SMTP not fully configured. Required env vars: SMTP_HOST, SMTP_USER, SMTP_PASS');
         }
-    } catch (e) {
-        // nodemailer not configured/installed - ignore and fallback to console
+    } catch (e: any) {
+        console.error('❌ Error sending verification email:', e.message || e);
     }
 
     // Fallback: print to server console for development/testing
-    console.log(`Verification code for ${to} (type=${type}): ${code}`);
+    if (type.includes('invitation')) {
+        const base = process.env.FRONTEND_URL || 'http://localhost:4200';
+        const link = uid ? `${base}/set-password-invite?uid=${uid}&code=${code}` : `${base}/set-password-invite`;
+        console.log(`\n========== INVITATION EMAIL ==========`);
+        console.log(`To: ${to}`);
+        console.log(`Invitation Code: ${code}`);
+        console.log(`Link: ${link}`);
+        console.log(`========================================\n`);
+    } else {
+        console.log(`Verification code for ${to} (type=${type}): ${code}`);
+    }
 }
 
 
@@ -462,5 +491,128 @@ export const updateUserStatus = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('updateUserStatus error:', error);
         res.status(500).json({ msg: 'Error al actualizar estado del usuario', error });
+    }
+}
+
+export const inviteUser = async (req: Request, res: Response) => {
+    try {
+        // Only admins can invite users
+        const requester: any = (req as any).user;
+        if (!requester || requester.rid !== 1) {
+            return res.status(403).json({ msg: 'Permisos insuficientes' });
+        }
+
+        const Uname = xss(req.body.Uname || '');
+        const Ulastname = xss(req.body.Ulastname || '');
+        const Uemail = xss(req.body.Uemail);
+        const Ucredential = xss(req.body.Ucredential || Uemail); // fallback: use email as credential
+        const Rid = Number(req.body.Rid) || 2; // default to User role
+
+        if (!Uname || !Ulastname || !Uemail || !Ucredential) {
+            return res.status(400).json({ msg: 'Faltan campos requeridos (Uname, Ulastname, Uemail, Ucredential)' });
+        }
+
+        const userEmail = await User.findOne({ where: { Uemail } });
+        const userCredential = await User.findOne({ where: { Ucredential } });
+
+        if (userEmail) {
+            return res.status(400).json({ msg: `Usuario ya existe con el email ${Uemail}` });
+        }
+        if (userCredential) {
+            return res.status(400).json({ msg: `Usuario ya existe con la credencial ${Ucredential}` });
+        }
+
+        // Generate temporary password (placeholder, will be replaced by user)
+        const tempPassword = 'TEMP_' + Math.random().toString(36).substring(2, 15);
+        const UpasswordHash = await bcrypt.hash(tempPassword, 10);
+
+        // Create user with placeholder password, status = 1 (active)
+        const newUser: any = await User.create({
+            Uname,
+            Ulastname,
+            Uemail,
+            Upassword: UpasswordHash,
+            Ucredential,
+            Ustatus: 1
+        });
+
+        // Create role mapping in user_has_roles
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        await UserHasRoles.create({ Uid: newUser.Uid, Rid });
+
+        // Generate invitation code
+        const inviteCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+        const key = `invite:${newUser.Uid}`;
+        verificationStore.set(key, { code: inviteCode, expiresAt });
+
+        // Send invitation email with code and uid in link
+        await sendVerificationEmail(
+            Uemail,
+            inviteCode,
+            `invitation (user: ${Ucredential})`,
+            newUser.Uid
+        );
+
+        res.json({
+            msg: 'Usuario invitado exitosamente. Se envió un correo de invitación.',
+            user: {
+                Uid: newUser.Uid,
+                Uname: newUser.Uname,
+                Uemail: newUser.Uemail
+            }
+        });
+    } catch (error) {
+        console.error('inviteUser error:', error);
+        res.status(500).json({ msg: 'Error al invitar usuario', error });
+    }
+}
+
+export const setPasswordFromInvite = async (req: Request, res: Response) => {
+    try {
+        const { Uid, inviteCode, newPassword } = req.body;
+
+        if (!Uid || !inviteCode || !newPassword) {
+            return res.status(400).json({ msg: 'Faltan campos requeridos (Uid, inviteCode, newPassword)' });
+        }
+
+        const user = await User.findByPk(Uid) as any as UserInstance;
+        if (!user) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+
+        const key = `invite:${Uid}`;
+        const entry = verificationStore.get(key);
+
+        if (!entry) {
+            return res.status(400).json({ msg: 'Código de invitación no encontrado o expirado' });
+        }
+        if (entry.expiresAt < Date.now()) {
+            verificationStore.delete(key);
+            return res.status(400).json({ msg: 'Código de invitación expirado' });
+        }
+        if (entry.code !== String(inviteCode)) {
+            return res.status(400).json({ msg: 'Código de invitación inválido' });
+        }
+
+        // Hash new password and update user
+        const UpasswordHash = await bcrypt.hash(xss(newPassword), 10);
+        await user.update({ Upassword: UpasswordHash });
+        await user.reload();
+
+        verificationStore.delete(key); // Code is single-use
+
+        res.json({
+            msg: 'Contraseña establecida correctamente. Puedes iniciar sesión.',
+            user: {
+                Uid: user.Uid,
+                Uname: user.Uname,
+                Uemail: user.Uemail
+            }
+        });
+    } catch (error) {
+        console.error('setPasswordFromInvite error:', error);
+        res.status(500).json({ msg: 'Error al establecer contraseña', error });
     }
 }

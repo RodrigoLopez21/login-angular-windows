@@ -89,5 +89,13 @@ export class UserService {
   updateUserRole(userId: number, Rid: number): Observable<any> {
     return this.http.put<any>(`${this.myAppUrl}${this.myAPIUrl}/role/${userId}`, { Rid });
   }
+
+  inviteUser(Uname: string, Ulastname: string, Uemail: string, Rid: number): Observable<any> {
+    return this.http.post<any>(`${this.myAppUrl}${this.myAPIUrl}/invite`, { Uname, Ulastname, Uemail, Rid });
+  }
+
+  setPasswordFromInvite(Uid: number, inviteCode: string, newPassword: string): Observable<any> {
+    return this.http.post<any>(`${this.myAppUrl}${this.myAPIUrl}/set-password-from-invite`, { Uid, inviteCode, newPassword });
+  }
   
 }

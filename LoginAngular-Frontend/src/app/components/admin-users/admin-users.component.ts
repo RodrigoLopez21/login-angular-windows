@@ -42,6 +42,14 @@ export class AdminUsersComponent implements OnInit {
   updatingRole: { [key: number]: boolean } = {};
   isAdmin: boolean = false;
   currentRid: number | null = null;
+  showInviteModal: boolean = false;
+  inviteForm = {
+    Uname: '',
+    Ulastname: '',
+    Uemail: '',
+    Rid: 2
+  };
+  invitingUser: boolean = false;
 
   constructor(
     private userService: UserService,
@@ -198,5 +206,45 @@ export class AdminUsersComponent implements OnInit {
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleString('es-ES');
+  }
+
+  openInviteModal(): void {
+    this.showInviteModal = true;
+    this.inviteForm = {
+      Uname: '',
+      Ulastname: '',
+      Uemail: '',
+      Rid: 2
+    };
+  }
+
+  closeInviteModal(): void {
+    this.showInviteModal = false;
+  }
+
+  inviteUser(): void {
+    if (!this.inviteForm.Uname || !this.inviteForm.Ulastname || !this.inviteForm.Uemail) {
+      this.toastr.error('Todos los campos son requeridos');
+      return;
+    }
+
+    this.invitingUser = true;
+    this.userService.inviteUser(
+      this.inviteForm.Uname,
+      this.inviteForm.Ulastname,
+      this.inviteForm.Uemail,
+      this.inviteForm.Rid
+    ).subscribe({
+      next: (response: any) => {
+        this.invitingUser = false;
+        this.toastr.success('Usuario invitado. Se envió un correo con instrucciones.');
+        this.closeInviteModal();
+        this.loadUsers();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.invitingUser = false;
+        this.errorService.msgError(err);
+      }
+    });
   }
 }

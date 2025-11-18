@@ -26,6 +26,7 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
 import { AdminUsersComponent } from './components/admin-users/admin-users.component';
+import { SetPasswordInviteComponent } from './components/set-password-invite/set-password-invite.component';
 
 // Inicializar seguridad
 export function initializeSecurity(securityService: SecurityService) {
@@ -52,7 +53,8 @@ export function initializeSecurity(securityService: SecurityService) {
     UserDashboardComponent,
     UserProfileComponent,
     AdminDashboardComponent,
-    AdminUsersComponent    
+    AdminUsersComponent,
+    SetPasswordInviteComponent
   ],
   imports: [
     BrowserModule,

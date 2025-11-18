@@ -10,10 +10,12 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
 import { AdminUsersComponent } from './components/admin-users/admin-users.component';
+import { SetPasswordInviteComponent } from './components/set-password-invite/set-password-invite.component';
 
 const routes: Routes = [
   {path: '', component: LoginComponent},
   {path: 'login', component: LoginComponent},
+  {path: 'set-password-invite', component: SetPasswordInviteComponent},
   {path: 'home', component: HomeComponent},
   // {path: 'category', component: CategoryComponent},
   {path: 'signIn', component: SigInComponent},

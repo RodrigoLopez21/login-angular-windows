@@ -9,6 +9,12 @@
           <span *ngIf="currentRid === 1" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Admin</span>
           <span *ngIf="currentRid !== 1" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">User</span>
           <button 
+            (click)="openInviteModal()"
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            ➕ Crear Usuario
+          </button>
+          <button 
             (click)="goBack()"
             class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
           >
@@ -158,6 +164,85 @@
           Cerrar
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Invite User Modal -->
+  <div *ngIf="showInviteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Invitar Nuevo Usuario</h3>
+        <button 
+          (click)="closeInviteModal()"
+          class="text-gray-400 hover:text-gray-600 text-2xl leading-none font-semibold"
+        >
+          ✕
+        </button>
+      </div>
+
+      <form (ngSubmit)="inviteUser()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Nombre</label>
+          <input 
+            [(ngModel)]="inviteForm.Uname" 
+            name="Uname"
+            type="text"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Apellido</label>
+          <input 
+            [(ngModel)]="inviteForm.Ulastname" 
+            name="Ulastname"
+            type="text"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input 
+            [(ngModel)]="inviteForm.Uemail" 
+            name="Uemail"
+            type="email"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Rol</label>
+          <select 
+            [(ngModel)]="inviteForm.Rid" 
+            name="Rid"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option [value]="2">Usuario</option>
+            <option [value]="1">Admin</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-4 border-t">
+          <button 
+            type="button"
+            (click)="closeInviteModal()"
+            class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            [disabled]="invitingUser"
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          >
+            {{ invitingUser ? 'Invitando...' : 'Invitar' }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

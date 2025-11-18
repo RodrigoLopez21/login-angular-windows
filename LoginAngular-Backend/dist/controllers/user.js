@@ -12,13 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserStatus = exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.updateUserRole = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.setPasswordFromInvite = exports.inviteUser = exports.updateUserStatus = exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.updateUserRole = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const xss_1 = __importDefault(require("xss"));
 const verificationStore = new Map();
-function sendVerificationEmail(to, code, type) {
+function sendVerificationEmail(to, code, type, uid) {
     return __awaiter(this, void 0, void 0, function* () {
         // Try to use nodemailer if available and SMTP env configured, otherwise fallback to console.log
         try {
@@ -29,6 +29,7 @@ function sendVerificationEmail(to, code, type) {
             const port = process.env.SMTP_PORT;
             const user = process.env.SMTP_USER;
             const pass = process.env.SMTP_PASS;
+            console.log('sendVerificationEmail - SMTP config:', { host, port, user: user ? '***' : 'NOT SET', pass: pass ? '***' : 'NOT SET' });
             if (host && user && pass) {
                 const transporter = nodemailer.createTransport({
                     host,
@@ -36,21 +37,47 @@ function sendVerificationEmail(to, code, type) {
                     secure: false,
                     auth: { user, pass }
                 });
+                let subject = `Código de verificación (${type})`;
+                let text = `Tu código de verificación es: ${code}`;
+                // Customize for invitation type
+                if (type.includes('invitation')) {
+                    subject = 'Invitación para establecer contraseña';
+                    const base = process.env.FRONTEND_URL || 'http://localhost:4200';
+                    const link = uid ? `${base}/set-password-invite?uid=${uid}&code=${code}` : `${base}/set-password-invite`;
+                    text = `Has sido invitado a la plataforma.\n\nTu código de invitación es: ${code}\n\n` +
+                        `Por favor visita: ${link}\n` +
+                        `E ingresa el código de invitación para establecer tu contraseña.`;
+                }
+                console.log('sendVerificationEmail - Sending email:', { to, subject, code });
                 const info = yield transporter.sendMail({
                     from: process.env.SMTP_FROM || user,
                     to,
-                    subject: `Código de verificación (${type})`,
-                    text: `Tu código de verificación es: ${code}`
+                    subject,
+                    text
                 });
-                console.log('Verification email sent:', info.messageId);
+                console.log('✅ Verification email sent successfully:', info.messageId);
                 return;
+            }
+            else {
+                console.warn('⚠️ SMTP not fully configured. Required env vars: SMTP_HOST, SMTP_USER, SMTP_PASS');
             }
         }
         catch (e) {
-            // nodemailer not configured/installed - ignore and fallback to console
+            console.error('❌ Error sending verification email:', e.message || e);
         }
         // Fallback: print to server console for development/testing
-        console.log(`Verification code for ${to} (type=${type}): ${code}`);
+        if (type.includes('invitation')) {
+            const base = process.env.FRONTEND_URL || 'http://localhost:4200';
+            const link = uid ? `${base}/set-password-invite?uid=${uid}&code=${code}` : `${base}/set-password-invite`;
+            console.log(`\n========== INVITATION EMAIL ==========`);
+            console.log(`To: ${to}`);
+            console.log(`Invitation Code: ${code}`);
+            console.log(`Link: ${link}`);
+            console.log(`========================================\n`);
+        }
+        else {
+            console.log(`Verification code for ${to} (type=${type}): ${code}`);
+        }
     });
 }
 const ReadUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -425,3 +452,106 @@ const updateUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.updateUserStatus = updateUserStatus;
+const inviteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Only admins can invite users
+        const requester = req.user;
+        if (!requester || requester.rid !== 1) {
+            return res.status(403).json({ msg: 'Permisos insuficientes' });
+        }
+        const Uname = (0, xss_1.default)(req.body.Uname || '');
+        const Ulastname = (0, xss_1.default)(req.body.Ulastname || '');
+        const Uemail = (0, xss_1.default)(req.body.Uemail);
+        const Ucredential = (0, xss_1.default)(req.body.Ucredential || Uemail); // fallback: use email as credential
+        const Rid = Number(req.body.Rid) || 2; // default to User role
+        if (!Uname || !Ulastname || !Uemail || !Ucredential) {
+            return res.status(400).json({ msg: 'Faltan campos requeridos (Uname, Ulastname, Uemail, Ucredential)' });
+        }
+        const userEmail = yield user_1.User.findOne({ where: { Uemail } });
+        const userCredential = yield user_1.User.findOne({ where: { Ucredential } });
+        if (userEmail) {
+            return res.status(400).json({ msg: `Usuario ya existe con el email ${Uemail}` });
+        }
+        if (userCredential) {
+            return res.status(400).json({ msg: `Usuario ya existe con la credencial ${Ucredential}` });
+        }
+        // Generate temporary password (placeholder, will be replaced by user)
+        const tempPassword = 'TEMP_' + Math.random().toString(36).substring(2, 15);
+        const UpasswordHash = yield bcryptjs_1.default.hash(tempPassword, 10);
+        // Create user with placeholder password, status = 1 (active)
+        const newUser = yield user_1.User.create({
+            Uname,
+            Ulastname,
+            Uemail,
+            Upassword: UpasswordHash,
+            Ucredential,
+            Ustatus: 1
+        });
+        // Create role mapping in user_has_roles
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        yield UserHasRoles.create({ Uid: newUser.Uid, Rid });
+        // Generate invitation code
+        const inviteCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+        const key = `invite:${newUser.Uid}`;
+        verificationStore.set(key, { code: inviteCode, expiresAt });
+        // Send invitation email with code and uid in link
+        yield sendVerificationEmail(Uemail, inviteCode, `invitation (user: ${Ucredential})`, newUser.Uid);
+        res.json({
+            msg: 'Usuario invitado exitosamente. Se envió un correo de invitación.',
+            user: {
+                Uid: newUser.Uid,
+                Uname: newUser.Uname,
+                Uemail: newUser.Uemail
+            }
+        });
+    }
+    catch (error) {
+        console.error('inviteUser error:', error);
+        res.status(500).json({ msg: 'Error al invitar usuario', error });
+    }
+});
+exports.inviteUser = inviteUser;
+const setPasswordFromInvite = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Uid, inviteCode, newPassword } = req.body;
+        if (!Uid || !inviteCode || !newPassword) {
+            return res.status(400).json({ msg: 'Faltan campos requeridos (Uid, inviteCode, newPassword)' });
+        }
+        const user = yield user_1.User.findByPk(Uid);
+        if (!user) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+        const key = `invite:${Uid}`;
+        const entry = verificationStore.get(key);
+        if (!entry) {
+            return res.status(400).json({ msg: 'Código de invitación no encontrado o expirado' });
+        }
+        if (entry.expiresAt < Date.now()) {
+            verificationStore.delete(key);
+            return res.status(400).json({ msg: 'Código de invitación expirado' });
+        }
+        if (entry.code !== String(inviteCode)) {
+            return res.status(400).json({ msg: 'Código de invitación inválido' });
+        }
+        // Hash new password and update user
+        const UpasswordHash = yield bcryptjs_1.default.hash((0, xss_1.default)(newPassword), 10);
+        yield user.update({ Upassword: UpasswordHash });
+        yield user.reload();
+        verificationStore.delete(key); // Code is single-use
+        res.json({
+            msg: 'Contraseña establecida correctamente. Puedes iniciar sesión.',
+            user: {
+                Uid: user.Uid,
+                Uname: user.Uname,
+                Uemail: user.Uemail
+            }
+        });
+    }
+    catch (error) {
+        console.error('setPasswordFromInvite error:', error);
+        res.status(500).json({ msg: 'Error al establecer contraseña', error });
+    }
+});
+exports.setPasswordFromInvite = setPasswordFromInvite;
