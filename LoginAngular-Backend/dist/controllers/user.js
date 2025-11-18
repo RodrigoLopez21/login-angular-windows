@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
+exports.confirmVerification = exports.requestVerification = exports.updateProfile = exports.getUserRole = exports.getProfile = exports.LoginVerify = exports.LoginUser = exports.CreateUser = exports.ReadUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_1 = require("../models/user");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -145,6 +145,11 @@ const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     if (entry.code !== String(code))
         return res.status(400).json({ msg: 'Código inválido' });
     verificationStore.delete(key); // Code is single-use
+    // Obtener el Rid del usuario desde user_has_roles
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { UserHasRoles } = require('../models/user_has_roles');
+    const userRole = yield UserHasRoles.findOne({ where: { Uid: user.Uid } });
+    const rid = userRole ? userRole.Rid : 2; // Default to 2 (User)
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
         console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
@@ -153,6 +158,7 @@ const LoginVerify = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     const token = jsonwebtoken_1.default.sign({
         id: user.Uid,
         email: user.Uemail,
+        rid: rid,
         rol: user.Ucredential
     }, secretKey);
     res.json({ token });
@@ -184,6 +190,24 @@ const getProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.getProfile = getProfile;
+const getUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        // Import the model dynamically to avoid circular issues
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+        const mapping = yield UserHasRoles.findOne({ where: { Uid: userId } });
+        if (!mapping) {
+            return res.status(404).json({ msg: 'Rol del usuario no encontrado' });
+        }
+        return res.json({ Rid: mapping.Rid });
+    }
+    catch (error) {
+        console.error('getUserRole error:', error);
+        return res.status(500).json({ msg: 'Error al obtener el rol del usuario', error });
+    }
+});
+exports.getUserRole = getUserRole;
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.id;

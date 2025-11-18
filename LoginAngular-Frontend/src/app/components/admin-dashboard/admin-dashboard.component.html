@@ -1,0 +1,120 @@
+<div class="min-h-screen bg-gray-100">
+  <!-- Header -->
+  <header class="bg-white shadow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-6">
+        <h1 class="text-3xl font-bold text-gray-900">Panel de Admin</h1>
+        <button 
+          (click)="logout()"
+          class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      
+      <!-- Tarjetas de Información -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-blue-500 rounded-full"></div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Mis Productos
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ productCount }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-green-500 rounded-full"></div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Pedidos Activos
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ activeOrders }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-yellow-500 rounded-full"></div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Mensajes
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ messageCount }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Acciones Rápidas -->
+      <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Acciones Rápidas</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
+            Ver Productos
+          </button>
+          <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-4 rounded">
+            Mis Pedidos
+          </button>
+          <button 
+          (click)="goToProfile()"
+          class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded">
+            Perfil
+          </button>
+          <button class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded">
+            Ayuda
+          </button>
+        </div>
+      </div>
+
+      <!-- Última Actividad -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Última Actividad</h2>
+        <div class="space-y-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            <p class="text-gray-700">Sesión iniciada correctamente</p>
+            <span class="text-gray-500 text-sm">{{ currentTime | date:'medium' }}</span>
+          </div>
+          <!-- Agrega más actividades aquí -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

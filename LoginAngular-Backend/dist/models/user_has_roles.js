@@ -9,4 +9,6 @@ const connection_1 = __importDefault(require("../database/connection"));
 exports.UserHasRoles = connection_1.default.define("user_has_roles", {
     Uid: { type: sequelize_1.DataTypes.INTEGER, primaryKey: true },
     Rid: { type: sequelize_1.DataTypes.INTEGER, primaryKey: true }
+}, {
+    timestamps: false
 });

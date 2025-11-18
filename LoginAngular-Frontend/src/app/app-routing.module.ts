@@ -8,6 +8,7 @@ import { HomeComponent } from './admin/home/home.component';
 import { CategoryComponent } from './admin/category/category.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
+import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
 
 const routes: Routes = [
   {path: '', component: LoginComponent},
@@ -16,6 +17,7 @@ const routes: Routes = [
   // {path: 'category', component: CategoryComponent},
   {path: 'signIn', component: SigInComponent},
   { path: 'user/dashboard', component: UserDashboardComponent },
+  { path: 'admin/dashboard', component: AdminDashboardComponent },
   { path: 'user/profile', component: UserProfileComponent },
   {path: 'admin', 
     // canActivate: [AuthGuard],     

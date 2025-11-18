@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+﻿import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import { User } from '../models/user'
 import { Op } from 'sequelize'
@@ -170,6 +170,12 @@ export const LoginVerify = async (req: Request, res: Response) => {
 
     verificationStore.delete(key); // Code is single-use
 
+    // Obtener el Rid del usuario desde user_has_roles
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { UserHasRoles } = require('../models/user_has_roles');
+    const userRole: any = await UserHasRoles.findOne({ where: { Uid: user.Uid } });
+    const rid = userRole ? userRole.Rid : 2; // Default to 2 (User)
+
     const secretKey = process.env.SECRET_KEY;
     if (!secretKey) {
         console.error('Error Crítico: La variable de entorno SECRET_KEY no está definida.');
@@ -178,6 +184,7 @@ export const LoginVerify = async (req: Request, res: Response) => {
     const token = jwt.sign({
         id: user.Uid,
         email: user.Uemail,
+        rid: rid,
         rol: user.Ucredential
     }, secretKey);
     res.json({ token });
@@ -207,6 +214,25 @@ export const getProfile = async (req: Request, res: Response) => {
             msg: 'Error al obtener el perfil del usuario',
             error
         });
+    }
+}
+
+export const getUserRole = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+        // Import the model dynamically to avoid circular issues
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { UserHasRoles } = require('../models/user_has_roles');
+
+        const mapping: any = await UserHasRoles.findOne({ where: { Uid: userId } });
+        if (!mapping) {
+            return res.status(404).json({ msg: 'Rol del usuario no encontrado' });
+        }
+
+        return res.json({ Rid: mapping.Rid });
+    } catch (error) {
+        console.error('getUserRole error:', error);
+        return res.status(500).json({ msg: 'Error al obtener el rol del usuario', error });
     }
 }
 

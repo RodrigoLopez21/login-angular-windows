@@ -58,4 +58,8 @@ export class UserService {
     return this.http.post(`${this.myAppUrl}${this.myAPIUrl}/verify-confirm`, { type, code, newValue, newPassword });
   }
   
+  getRole(): Observable<any> {
+    return this.http.get<any>(`${this.myAppUrl}${this.myAPIUrl}/role`);
+  }
+  
 }

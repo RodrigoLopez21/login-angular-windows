@@ -1,10 +1,11 @@
-import { HttpErrorResponse } from '@angular/common/http';
+﻿import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { User } from 'src/app/interfaces/user';
 import { ErrorService } from 'src/app/services/error.service';
 import { UserService } from 'src/app/services/user.service';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -23,7 +24,8 @@ export class LoginComponent  implements OnInit{
     private toastr: ToastrService,
     private _userService:  UserService,
     private router: Router,
-    private _errorService: ErrorService
+    private _errorService: ErrorService,
+    private authService: AuthService
   ){}
 
   ngOnInit(): void {}
@@ -33,7 +35,6 @@ export class LoginComponent  implements OnInit{
       return
     }
 
-    //CREAMOS EL OBJETO
     const user: User = {
       email: this.email,
       password: this.password
@@ -50,7 +51,21 @@ export class LoginComponent  implements OnInit{
           const token = response.token;
           this.toastr.success("", "Bienvenido");
           localStorage.setItem('myToken',token);
-          this.router.navigate(['/user/dashboard']);
+          let rid = this.authService.getRoleFromToken();
+          if (rid == null) {
+            // fallback: ask backend for role (older flow)
+            this._userService.getRole().subscribe({
+              next: (r: any) => {
+                const backendRid = Number(r.Rid);
+                if (backendRid === 1) this.router.navigate(['/admin/dashboard']);
+                else this.router.navigate(['/user/dashboard']);
+              },
+              error: () => this.router.navigate(['/user/dashboard'])
+            });
+          } else {
+            if (rid === 1) this.router.navigate(['/admin/dashboard']);
+            else this.router.navigate(['/user/dashboard']);
+          }
         }
       },
       error: (e: HttpErrorResponse) => {
@@ -72,7 +87,20 @@ export class LoginComponent  implements OnInit{
         const token = response.token;
         this.toastr.success("", "Bienvenido");
         localStorage.setItem('myToken', token);
-        this.router.navigate(['/user/dashboard']);
+        let rid = this.authService.getRoleFromToken();
+        if (rid == null) {
+          this._userService.getRole().subscribe({
+            next: (r: any) => {
+              const backendRid = Number(r.Rid);
+              if (backendRid === 1) this.router.navigate(['/admin/dashboard']);
+              else this.router.navigate(['/user/dashboard']);
+            },
+            error: () => this.router.navigate(['/user/dashboard'])
+          });
+        } else {
+          if (rid === 1) this.router.navigate(['/admin/dashboard']);
+          else this.router.navigate(['/user/dashboard']);
+        }
       },
       error: (e: HttpErrorResponse) => {
         this.loading = false;
