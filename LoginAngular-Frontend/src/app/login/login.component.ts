@@ -1,5 +1,5 @@
 ﻿import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { User } from 'src/app/interfaces/user';
@@ -7,18 +7,23 @@ import { ErrorService } from 'src/app/services/error.service';
 import { UserService } from 'src/app/services/user.service';
 import { AuthService } from 'src/app/services/auth.service';
 
+declare var grecaptcha: any;
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent  implements OnInit{
+export class LoginComponent implements OnInit, AfterViewInit {
 
   email: string = '';
   password: string = '';
   code: string = '';
   loading: boolean = false;
   twoFactorRequired: boolean = false;
+  recaptchaToken: string = '';
+  siteKey: string = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Google test key
+  recaptchaWidgetId: any = null;
 
   constructor(
     private toastr: ToastrService,
@@ -29,10 +34,52 @@ export class LoginComponent  implements OnInit{
   ){}
 
   ngOnInit(): void {}
+
+  ngAfterViewInit(): void {
+    // Renderizar el widget de reCAPTCHA cuando la vista esté lista
+    this.renderRecaptcha();
+  }
+
+  renderRecaptcha() {
+    if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+      try {
+        const container = document.getElementById('recaptcha-container');
+        if (container && !this.recaptchaWidgetId) {
+          this.recaptchaWidgetId = grecaptcha.render('recaptcha-container', {
+            'sitekey': this.siteKey,
+            'callback': (token: string) => {
+              this.recaptchaToken = token;
+            },
+            'expired-callback': () => {
+              this.recaptchaToken = '';
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error rendering reCAPTCHA:', error);
+        // Si falla, intentar de nuevo después de un delay
+        setTimeout(() => this.renderRecaptcha(), 500);
+      }
+    } else {
+      // Si grecaptcha no está listo, esperar y reintentar
+      setTimeout(() => this.renderRecaptcha(), 500);
+    }
+  }
+  
+  onRecaptchaResolved(token: string) {
+    this.recaptchaToken = token;
+  }
+
   login(){
     if (this.email == '' || this.password == '') {
       this.toastr.error('Todos los campos son obligatorios!', 'Error');
       return
+    }
+
+    // Validar reCAPTCHA
+    if (!this.recaptchaToken) {
+      this.toastr.error('Por favor, complete el reCAPTCHA', 'Error');
+      return;
     }
 
     const user: User = {
@@ -41,9 +88,11 @@ export class LoginComponent  implements OnInit{
     }
     this.loading =  true
 
-    this._userService.login(user).subscribe({
+    this._userService.login(user, this.recaptchaToken).subscribe({
       next: (response: any) => {
         this.loading =  false;
+        // Resetear reCAPTCHA después de envío exitoso
+        this.resetRecaptcha();
         if (response.twoFactorRequired) {
           this.twoFactorRequired = true;
           this.toastr.info('Se ha enviado un código de verificación a su correo.');
@@ -72,9 +121,21 @@ export class LoginComponent  implements OnInit{
       },
       error: (e: HttpErrorResponse) => {
         this.loading =  false
+        this.resetRecaptcha();
         this._errorService.msgError(e)
       },
     })   
+  }
+
+  resetRecaptcha() {
+    this.recaptchaToken = '';
+    if (typeof grecaptcha !== 'undefined' && this.recaptchaWidgetId !== null) {
+      try {
+        grecaptcha.reset(this.recaptchaWidgetId);
+      } catch (error) {
+        console.error('Error resetting reCAPTCHA:', error);
+      }
+    }
   }
 
   verifyCode() {

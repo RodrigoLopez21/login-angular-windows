@@ -4,6 +4,7 @@ import { User } from '../models/user'
 import { Op } from 'sequelize'
 import jwt from 'jsonwebtoken'
 import xss from 'xss';
+import axios from 'axios';
 
 interface UserInstance {
     Uid: number;
@@ -25,6 +26,26 @@ type VerificationEntry = {
 };
 
 const verificationStore: Map<string, VerificationEntry> = new Map();
+
+async function verifyRecaptcha(token: string): Promise<boolean> {
+    try {
+        const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+        const response = await axios.post(
+            `https://www.google.com/recaptcha/api/siteverify`,
+            null,
+            {
+                params: {
+                    secret: secretKey,
+                    response: token
+                }
+            }
+        );
+        return response.data.success === true;
+    } catch (error) {
+        console.error('Error verifying reCAPTCHA:', error);
+        return false;
+    }
+}
 
 async function sendVerificationEmail(to: string, code: string, type: string, uid?: number) {
     // Try to use nodemailer if available and SMTP env configured, otherwise fallback to console.log
@@ -159,7 +180,21 @@ export const CreateUser = async (req: Request, res: Response) => {
 }
 
 export const LoginUser = async (req: Request, res: Response) => {
-    const { Uemail, Upassword } = req.body;
+    const { Uemail, Upassword, recaptchaToken } = req.body;
+
+    // Verificar reCAPTCHA
+    if (!recaptchaToken) {
+        return res.status(400).json({
+            msg: 'reCAPTCHA es requerido'
+        });
+    }
+
+    const isRecaptchaValid = await verifyRecaptcha(recaptchaToken);
+    if (!isRecaptchaValid) {
+        return res.status(400).json({
+            msg: 'Verificación de reCAPTCHA fallida. Por favor, intenta de nuevo.'
+        });
+    }
 
     const user: any = await User.findOne({ where: { Uemail: Uemail } })
     if (!user) {
